@@ -10,7 +10,7 @@ Notice how the glyphs are tightly rendered without any redundant white space on 
 ![](https://github.com/moazin/svg-native-viewer/blob/demo-viewbox/svgnative/example/testSkia/j-Ubuntu.png)
 
 ### Attempting to render example 3 from OT-SVG specs
-I have modified `testSkia.cpp` to take a few more command line arguments:
+I have [modified](https://github.com/moazin/svg-native-viewer/commit/c6ad6ebeccc5610993fe3ff7c2c7ac16f7e70f55) `testSkia.cpp` to take a few more command line arguments:
 ```shell
 ./testSkia <input-svg-file> <output-png-file> <x> <y> <width> <height>
 ```
