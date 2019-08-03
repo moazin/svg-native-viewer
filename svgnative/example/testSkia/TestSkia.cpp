@@ -15,6 +15,7 @@ governing permissions and limitations under the License.
 #include "SkImage.h"
 #include "SkStream.h"
 #include "SkSurface.h"
+#include "SkCanvas.h"
 #include "SkiaSVGRenderer.h"
 
 #include <fstream>
@@ -23,7 +24,7 @@ governing permissions and limitations under the License.
 
 int main(int argc, char* const argv[])
 {
-    if (argc != 3)
+    if (argc != 7)
     {
         std::cout << "Incorrect number of arguments." << std::endl;
         return 0;
@@ -31,6 +32,12 @@ int main(int argc, char* const argv[])
 
     std::string svgInput{};
     std::ifstream input(argv[1]);
+
+    float x = std::stof(argv[3]);
+    float y = std::stof(argv[4]);
+    float width  = std::stof(argv[5]);
+    float height = std::stof(argv[6]);
+
     if (!input)
     {
         std::cout << "Error! Could not open input file." << std::endl;
@@ -44,10 +51,11 @@ int main(int argc, char* const argv[])
 
     auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(svgInput.c_str(), renderer));
 
-    auto skRasterSurface = SkSurface::MakeRasterN32Premul(doc->Width(), doc->Height());
+    auto skRasterSurface = SkSurface::MakeRasterN32Premul(width, height);
     auto skRasterCanvas = skRasterSurface->getCanvas();
 
     renderer->SetSkCanvas(skRasterCanvas);
+    skRasterCanvas->translate(x, y);
     doc->Render();
 
     auto skImage = skRasterSurface->makeImageSnapshot();
