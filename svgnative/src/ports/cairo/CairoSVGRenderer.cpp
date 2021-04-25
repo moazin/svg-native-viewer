@@ -467,6 +467,82 @@ void CairoSVGRenderer::DrawImage(
     Restore();
 }
 
+Rect CairoSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle)
+{
+    // bounds rectangle
+    double x0, y0, x1, y1;
+
+    SVG_ASSERT(mCairo);
+    Save(graphicStyle);
+
+    if (fillStyle.hasFill)
+    {
+        cairo_new_path(mCairo);
+        appendCairoSvgPath(mCairo, path);
+        setCairoFillAndClipRule(mCairo, fillStyle.fillRule);
+        cairo_save(mCairo);
+        cairo_identity_matrix(mCairo);
+        cairo_fill_extents(mCairo, &x0, &y0, &x1, &y1);
+        cairo_restore(mCairo);
+    }
+    if (strokeStyle.hasStroke)
+    {
+        const auto& color = boost::get<Color>(strokeStyle.paint);
+        cairo_set_source_rgba(mCairo,
+                              color[0],
+                              color[1],
+                              color[2],
+                              color[3] * strokeStyle.strokeOpacity * graphicStyle.opacity);
+
+        cairo_set_line_width(mCairo, strokeStyle.lineWidth);
+
+        switch (strokeStyle.lineCap)
+        {
+        case LineCap::kRound:
+            cairo_set_line_cap(mCairo, CAIRO_LINE_CAP_ROUND);
+            break;
+        case LineCap::kSquare:
+            cairo_set_line_cap(mCairo, CAIRO_LINE_CAP_SQUARE);
+            break;
+        case LineCap::kButt:
+        default:
+            cairo_set_line_cap(mCairo, CAIRO_LINE_CAP_BUTT);
+        }
+
+        switch (strokeStyle.lineJoin)
+        {
+        case LineJoin::kRound:
+            cairo_set_line_join(mCairo, CAIRO_LINE_JOIN_ROUND);
+            break;
+        case LineJoin::kBevel:
+            cairo_set_line_join(mCairo, CAIRO_LINE_JOIN_BEVEL);
+            break;
+        case LineJoin::kMiter:
+        default:
+            cairo_set_line_join(mCairo, CAIRO_LINE_JOIN_MITER);
+        }
+
+        if (!strokeStyle.dashArray.empty())
+        {
+            std::vector<double> dashes;
+            for (auto dash : strokeStyle.dashArray)
+                 dashes.push_back(dash);
+            cairo_set_dash(mCairo, dashes.data(), strokeStyle.dashArray.size(), strokeStyle.dashOffset);
+        }
+
+        cairo_new_path(mCairo);
+        appendCairoSvgPath(mCairo, path);
+        cairo_save(mCairo);
+        cairo_identity_matrix(mCairo);
+        cairo_stroke_extents(mCairo, &x0, &y0, &x1, &y1);
+        cairo_restore(mCairo);
+    }
+    Restore();
+
+    Rect bounds{x0, y0, (x1 - x0 + 1), (y1 - y0 + 1)};
+    return bounds;
+}
+
 void CairoSVGRenderer::SetCairo(cairo_t* cr)
 {
     SVG_ASSERT(cr);

@@ -192,6 +192,7 @@ public:
     void AddCustomCSS(const StyleSheet::CssDocument* cssDocument);
     void ClearCustomCSS();
 #endif
+    std::vector<Rect> Bounds();
     void Render(const ColorMap& colorMap, float width, float height);
     void Render(const char* id, const ColorMap& colorMap, float width, float height);
 
@@ -220,7 +221,9 @@ private:
 
     void RenderElement(const Element& element, const ColorMap& colorMap, float width, float height);
 
+    void ExtractBounds(const Element&);
     void TraverseTree(const ColorMap& colorMap, const Element&);
+
 
     void ApplyCSSStyle(
         const std::set<std::string>& classNames, GraphicStyleImpl& graphicStyle, FillStyleImpl& fillStyle, StrokeStyleImpl& strokeStyle);
@@ -251,6 +254,7 @@ private:
     std::map<std::string, GradientImpl> mGradients;
     std::map<std::string, std::shared_ptr<ClippingPath>> mClippingPaths;
     std::stack<std::shared_ptr<Group>> mGroupStack;
+    std::vector<Rect> mBounds;
 
     // Render tree created during parsing.
     std::shared_ptr<Group> mGroup;

@@ -934,6 +934,15 @@ void SVGDocumentImpl::ParseGradient(XMLNode* node)
         mGradients.insert({attr.value, gradient});
 }
 
+std::vector<Rect> SVGDocumentImpl::Bounds()
+{
+    SVG_ASSERT(mGroup);
+    if (!mGroup)
+        return std::vector<Rect>{};
+    ExtractBounds(*mGroup);
+    return mBounds;
+}
+
 void SVGDocumentImpl::Render(const ColorMap& colorMap, float width, float height)
 {
     SVG_ASSERT(mGroup);
@@ -1108,6 +1117,80 @@ void SVGDocumentImpl::TraverseTree(const ColorMap& colorMap, const Element& elem
         auto saveRestore = SaveRestoreHelper{mRenderer, group.graphicStyle};
         for (const auto& child : group.children)
             TraverseTree(colorMap, *child);
+        break;
+    }
+    default:
+        SVG_ASSERT_MSG(false, "Unknown element type");
+    }
+}
+
+void SVGDocumentImpl::ExtractBounds(const Element& element)
+{
+    // This function is a copy of the TraverseTree function and we just modify
+    // it to calculate the bounds instead of rendering the elements
+
+    // Inheritance doesn't work for override styles. Since override styles
+    // are deprecated, we are not going to fix this nor is this expected by
+    // (still existing) clients.
+    auto graphicStyle = element.graphicStyle;
+    FillStyleImpl fillStyle{};
+    StrokeStyleImpl strokeStyle{};
+    // Do not draw element if an applied clipPath has no content.
+    if (graphicStyle.clippingPath && !graphicStyle.clippingPath->hasClipContent)
+        return;
+    switch (element.Type())
+    {
+    case ElementType::kReference:
+    {
+        const auto& reference = static_cast<const Reference&>(element);
+        const auto it = mVisitedElements.find(&reference);
+        if (it != mVisitedElements.end())
+            break; // We found a cycle. Do not continue rendering.
+        auto insertResult = mVisitedElements.insert(&reference);
+
+        // Render referenced content.
+        auto refIt = mIdToElementMap.find(reference.href);
+        if (refIt != mIdToElementMap.end())
+        {
+            ApplyCSSStyle(reference.classNames, graphicStyle, fillStyle, strokeStyle);
+            mRenderer->Save(reference.graphicStyle);
+            ExtractBounds(*(refIt->second));
+            mRenderer->Restore();
+        }
+
+        // Done processing current element.
+        mVisitedElements.erase(insertResult.first);
+        break;
+    }
+    case ElementType::kGraphic:
+    {
+        const auto& graphic = static_cast<const Graphic&>(element);
+        // TODO: Since we keep the original fill, stroke and color property values
+        // we should be able to do w/o a copy.
+        fillStyle = graphic.fillStyle;
+        strokeStyle = graphic.strokeStyle;
+        ApplyCSSStyle(graphic.classNames, graphicStyle, fillStyle, strokeStyle);
+        // If we have a CSS var() function we need to replace the placeholder with
+        // an actual color from our externally provided color map here.
+        Rect bounds = mRenderer->PathBounds(*(graphic.path.get()), graphicStyle, fillStyle, strokeStyle);
+        mBounds.push_back(bounds);
+        break;
+    }
+    case ElementType::kImage:
+    {
+        const auto& image = static_cast<const Image&>(element);
+        ApplyCSSStyle(image.classNames, graphicStyle, fillStyle, strokeStyle);
+        //mRenderer->DrawImage(*(image.imageData.get()), graphicStyle, image.clipArea, image.fillArea);
+        break;
+    }
+    case ElementType::kGroup:
+    {
+        const auto& group = static_cast<const Group&>(element);
+        ApplyCSSStyle(group.classNames, graphicStyle, fillStyle, strokeStyle);
+        mRenderer->Save(group.graphicStyle);
+        for (const auto& child : group.children)
+            ExtractBounds(*child);
+        mRenderer->Restore();
         break;
     }
     default:

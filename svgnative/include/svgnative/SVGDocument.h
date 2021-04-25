@@ -20,6 +20,7 @@ governing permissions and limitations under the License.
 #include <memory>
 #include <string>
 #include <vector>
+#include "SVGRenderer.h"
 
 #ifdef STYLE_SUPPORT
 namespace StyleSheet
@@ -80,6 +81,11 @@ public:
      */
     void ClearCustomCSS();
 #endif
+
+    /**
+     * Gets all the bounds of all the paths in the SVG document.
+     */
+    std::vector<Rect> Bounds();
 
     /**
      * Renders the parsed SVG document to renderer. Some clients require a separation
