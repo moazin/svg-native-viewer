@@ -50,6 +50,7 @@ option(SKIA "Enable Skia port")
 option(GDIPLUS "Enable GDI+ port")
 option(STYLE "Enable deprecated CSS Styling support")
 option(CAIRO "Enable Cairo port")
+option(TESTING "Enable tests using Google Test" ON)
 
 CMAKE_DEPENDENT_OPTION(USE_SHARED "Dynamic library" TRUE "SHARED" FALSE)
 CMAKE_DEPENDENT_OPTION(USE_PLATFORM_XML "Platform XML parser" TRUE "PLATFORM_XML" FALSE)
@@ -479,6 +480,21 @@ CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/SVGNativeViewerLib.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/SVGNativeViewerLib.pc" @ONLY)
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/SVGNativeViewerLib-uninstalled.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/SVGNativeViewerLib-uninstalled.pc" @ONLY)
+
+################################
+# setting for Google Tests
+################################
+if (TESTING)
+	enable_testing()
+	include(FetchContent)
+	message(STATUS "Fetching Google Test framework for testing purposes")
+	FetchContent_Declare(googletest GIT_REPOSITORY https://github.com/google/googletest.git)
+	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+	FetchContent_MakeAvailable(googletest)
+	message(STATUS "Fetching Google Test complete")
+	add_subdirectory(tests)
+endif()
+
 
 ##############################
 # Installation

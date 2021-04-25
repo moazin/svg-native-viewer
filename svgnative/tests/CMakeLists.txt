@@ -1,0 +1,4 @@
+add_executable(runRectangleTest test-rectangle.cpp)
+target_link_libraries(runRectangleTest SVGNativeViewerLib)
+target_link_libraries(runRectangleTest gtest_main)
+add_test(NAME rectangle_unit_test COMMAND runRectangleTest)
