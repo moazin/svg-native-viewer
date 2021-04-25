@@ -296,6 +296,49 @@ void SkiaSVGRenderer::DrawImage(
     Restore();
 }
 
+Rect SkiaSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle)
+{
+    SkRect bounds;
+
+    SVG_ASSERT(mCanvas);
+    Save(graphicStyle);
+    if (fillStyle.hasFill)
+    {
+        SkPaint fill;
+        fill.setStyle(SkPaint::kFill_Style);
+        CreateSkPaint(fillStyle.paint, fillStyle.fillOpacity, fill);
+        SkPath mPath = (static_cast<const SkiaSVGPath&>(path).mPath);
+        mPath.setFillType(fillStyle.fillRule == WindingRule::kNonZero ? SkPathFillType::kWinding : SkPathFillType::kEvenOdd);
+        bounds = mPath.computeTightBounds();
+    }
+    if (strokeStyle.hasStroke)
+    {
+        SkPaint stroke;
+        stroke.setStyle(SkPaint::kStroke_Style);
+        stroke.setStrokeWidth(strokeStyle.lineWidth);
+        if (!strokeStyle.dashArray.empty())
+        {
+            stroke.setPathEffect(SkDashPathEffect::Make((SkScalar*)(strokeStyle.dashArray.data()),
+                                                        strokeStyle.dashArray.size(),
+                                                        (SkScalar)strokeStyle.dashOffset));
+        }
+        CreateSkPaint(strokeStyle.paint, strokeStyle.strokeOpacity, stroke);
+        SkPath mPath = (static_cast<const SkiaSVGPath&>(path).mPath);
+        if (!fillStyle.hasFill)
+            bounds = mPath.computeTightBounds();
+        if (stroke.canComputeFastBounds())
+          bounds = stroke.computeFastBounds(bounds, &bounds);
+
+    }
+
+    SkMatrix matrix = mCanvas->getLocalToDeviceAs3x3();
+    bounds = matrix.mapRect(bounds);
+
+    Restore();
+
+    return Rect{bounds.x(), bounds.y(), bounds.width(), bounds.height()};
+}
+
 void SkiaSVGRenderer::SetSkCanvas(SkCanvas* canvas)
 {
     SVG_ASSERT(canvas);
