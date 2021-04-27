@@ -104,20 +104,92 @@ using Paint = boost::variant<Color, Gradient>;
 using ColorStop = std::pair<float, Color>;
 using ColorMap = std::map<std::string, Color>;
 
+class Interval
+{
+  public:
+    Interval(): isEmpty(true) {}
+    Interval(float u): a(u), b(u), isEmpty(false) {}
+    Interval(float u, float v)
+    {
+      isEmpty = false;
+      if (u <= v)
+      {
+        a = u;
+        b = v;
+      }
+      else
+      {
+        a = v;
+        b = u;
+      }
+    }
+    float min() { return a; }
+    float max() { return b; }
+    operator bool()
+    {
+      return !isEmpty;
+    }
+    Interval operator&(Interval other)
+    {
+      if (!(*this) || !(other))
+        return Interval();
+      else
+      {
+        float a = std::max(this->min(), other.min());
+        float b = std::min(this->max(), other.max());
+        if (a <= b)
+          return Interval(a, b);
+        else
+          return Interval();
+      }
+    }
+  private:
+    float a = std::numeric_limits<float>::quiet_NaN();
+    float b = std::numeric_limits<float>::quiet_NaN();
+    bool isEmpty = true;
+};
+
 struct Rect
 {
     Rect() = default;
     Rect(float aX, float aY, float aWidth, float aHeight)
-        : x{aX}
-        , y{aY}
-        , width{aWidth}
-        , height{aHeight}
     {
+      x = aX;
+      y = aY;
+      width = aWidth;
+      height = aHeight;
+      if (width != 0 && height != 0)
+        isEmpty = false;
+    }
+    operator bool(){ return !isEmpty; }
+    std::tuple<Interval, Interval> intervals()
+    {
+      double x0, y0, x1, y1;
+      x0 = x;
+      y0 = y;
+      x1 = x0 + width - 1;
+      y1 = y0 + height - 1;
+      return std::tuple<Interval, Interval>(Interval(x0, x1), Interval(y0, y1));
+    }
+    Rect operator&(Rect other){
+      std::tuple<Interval, Interval> intervals_a = intervals();
+      std::tuple<Interval, Interval> intervals_b = other.intervals();
+      Interval resultant_x = std::get<0>(intervals_a) & std::get<0>(intervals_b);
+      Interval resultant_y = std::get<1>(intervals_a) & std::get<1>(intervals_b);
+      if (!resultant_x || !resultant_y)
+        return Rect{};
+      float x0, y0, x1, y1;
+      x0 = resultant_x.min();
+      y0 = resultant_y.min();
+      x1 = resultant_x.max();
+      y1 = resultant_y.max();
+      return Rect{x0, y0, (x1 - x0 + 1), (y1 - y0 + 1)};
     }
     float x = std::numeric_limits<float>::quiet_NaN();
     float y = std::numeric_limits<float>::quiet_NaN();
     float width = std::numeric_limits<float>::quiet_NaN();
     float height = std::numeric_limits<float>::quiet_NaN();
+    bool isEmpty = true;
 };
 
 /**
