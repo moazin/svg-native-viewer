@@ -19,25 +19,40 @@ governing permissions and limitations under the License.
 
 - (void)drawRect:(NSRect)dirtyRect {
     [super drawRect:dirtyRect];
-	
+
 	Document* d = [[[self window] windowController] document];
 	SVGNative::SVGDocument* doc = [d getSVGDocument];
 	if (!doc)
 		return;
-	
+
 	NSGraphicsContext* nsGraphicsContext = [NSGraphicsContext currentContext];
 	CGContextRef ctx = (CGContextRef) [nsGraphicsContext CGContext];
 	SVGNative::CGSVGRenderer* renderer = static_cast<SVGNative::CGSVGRenderer*>(doc->Renderer());
 
 	CGRect r(dirtyRect);
-	
+
 	CGAffineTransform m = {1.0, 0.0, 0.0, -1.0, 0.0, r.size.height};
-	CGContextConcatCTM(ctx, m);
+    CGContextConcatCTM(ctx, m);
 
 	renderer->SetGraphicsContext(ctx);
-	
-	doc->Render(r.size.width, r.size.height);
-	
+
+	doc->Render();
+    std::vector<SVGNative::Rect> bounding_boxes = doc->Bounds();
+
+    CGAffineTransform current_t = CGContextGetCTM(ctx);
+    CGAffineTransform inverse_t = CGAffineTransformInvert(current_t);
+    CGContextConcatCTM(ctx, inverse_t);
+    for(unsigned long i = 0; i < bounding_boxes.size(); i++)
+    {
+        SVGNative::Rect box = bounding_boxes[i];
+        CGContextSetLineWidth(ctx, 1);
+        CGContextSetRGBStrokeColor(ctx, 1.0, 1.0, 1.0, 1.0);
+        CGRect rect{CGPoint{box.x, box.y}, CGSize{box.width, box.height}};
+        CGPathRef rectangle_bbox = CGPathCreateWithRect(rect, nullptr);
+        CGContextBeginPath(ctx);
+        CGContextAddPath(ctx, rectangle_bbox);
+        CGContextStrokePath(ctx);
+    }
 	renderer->ReleaseGraphicsContext();
 }
 
