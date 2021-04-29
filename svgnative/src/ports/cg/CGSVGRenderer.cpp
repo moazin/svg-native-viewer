@@ -66,7 +66,7 @@ CGSVGTransform::CGSVGTransform(float a, float b, float c, float d, float tx, flo
 
 void CGSVGTransform::Set(float a, float b, float c, float d, float tx, float ty) { mTransform = {a, b, c, d, tx, ty}; }
 
-void CGSVGTransform::Rotate(float r) { mTransform = CGAffineTransformRotate(mTransform, r); }
+void CGSVGTransform::Rotate(float degree) { mTransform = CGAffineTransformRotate(mTransform, (degree * M_PI / 180.0)); }
 
 void CGSVGTransform::Translate(float tx, float ty) { mTransform = CGAffineTransformTranslate(mTransform, tx, ty); }
 
@@ -268,6 +268,74 @@ void CGSVGRenderer::DrawImage(const ImageData& image, const GraphicStyle& graphi
     CGContextScaleCTM(mContext, 1, -1);
     CGContextDrawImage(mContext, {{fillArea.x, 0}, {fillArea.width, fillArea.height}}, static_cast<const CGSVGImageData&>(image).mImage);
     Restore();
+}
+
+Rect CGSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle)
+{
+    CGRect bounding_box;
+
+    SVG_ASSERT(mContext);
+    Save(graphicStyle);
+    if (fillStyle.hasFill)
+    {
+        CGPathRef path_orig = static_cast<const CGSVGPath&>(path).mPath;
+        bounding_box = CGPathGetPathBoundingBox(path_orig);
+    }
+    if (strokeStyle.hasStroke)
+    {
+        CGLineCap lineCap;
+        CGLineJoin lineJoin;
+        switch (strokeStyle.lineCap)
+        {
+        case LineCap::kButt:
+            lineCap = kCGLineCapButt;
+            break;
+        case LineCap::kRound:
+            lineCap = kCGLineCapRound;
+            break;
+        case LineCap::kSquare:
+            lineCap = kCGLineCapSquare;
+            break;
+        }
+        switch (strokeStyle.lineJoin)
+        {
+        case LineJoin::kMiter:
+            lineJoin = kCGLineJoinMiter;
+            break;
+        case LineJoin::kRound:
+            lineJoin = kCGLineJoinRound;
+            break;
+        case LineJoin::kBevel:
+            lineJoin = kCGLineJoinBevel;
+            break;
+        }
+        CGPathRef path_orig = static_cast<const CGSVGPath&>(path).mPath;
+        CGPathRef stroked_path = CGPathCreateCopyByStrokingPath(path_orig, nullptr, strokeStyle.lineWidth, lineCap, lineJoin, strokeStyle.miterLimit);
+        bounding_box = CGPathGetBoundingBox(stroked_path);
+
+    }
+    CGContextSetShouldAntialias(mContext, true);
+
+    if (graphicStyle.clippingPath)
+    {
+        Rect orig_bbox{(float)bounding_box.origin.x, (float)bounding_box.origin.y, (float)bounding_box.size.width, (float)bounding_box.size.height};
+        CGRect clip_box = CGContextGetClipBoundingBox(mContext);
+        Rect clip_bbox{(float)clip_box.origin.x, (float)clip_box.origin.y, (float)clip_box.size.width, (float)clip_box.size.height};
+        orig_bbox = orig_bbox & clip_bbox;
+        bounding_box.origin.x = orig_bbox.x;
+        bounding_box.origin.y = orig_bbox.y;
+        bounding_box.size.width = orig_bbox.width;
+        bounding_box.size.height = orig_bbox.height;
+    }
+
+    CGAffineTransform transformation = CGContextGetCTM(mContext);
+    CGPathRef transformed_rect_path = CGPathCreateWithRect(bounding_box, &transformation);
+    bounding_box = CGPathGetPathBoundingBox(transformed_rect_path);
+    CGPathRelease(transformed_rect_path);
+
+    Restore();
+
+    return Rect{(float)bounding_box.origin.x, (float)bounding_box.origin.y, (float)bounding_box.size.width, (float)bounding_box.size.height};
 }
 
 } // namespace SVGNative
