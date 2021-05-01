@@ -40,7 +40,7 @@ MainWinPaintToCanvas(HDC hdc)
     auto renderer = std::shared_ptr<GDIPlusSVGRenderer>(new GDIPlusSVGRenderer);
     renderer->SetGraphicsContext(&graphics);
 
-    std::ifstream svg_file("svg-docs/fill-exps.svg");
+    std::ifstream svg_file("svg-docs/paths.svg");
 
     std::string svg_doc = "";
     std::string line;
@@ -49,9 +49,12 @@ MainWinPaintToCanvas(HDC hdc)
     }
     auto svgDocument = SVGDocument::CreateSVGDocument(svg_doc.c_str(), renderer);
     
+    graphics.TranslateTransform(200, Gdiplus::MatrixOrderPrepend);
+
     svgDocument->Render();
     std::vector<SVGNative::Rect> bounds = svgDocument->Bounds();
 
+    graphics.ResetTransform();
 
     Pen pen{ Gdiplus::Color{255, 0, 0} };
     for (int i = 0; i < bounds.size(); i++)
