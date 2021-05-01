@@ -939,7 +939,10 @@ std::vector<Rect> SVGDocumentImpl::Bounds()
     SVG_ASSERT(mGroup);
     if (!mGroup)
         return std::vector<Rect>{};
+    mRenderer->Save(GraphicStyle());
+    mRenderer->Reset();
     ExtractBounds(*mGroup);
+    mRenderer->Restore();
     return mBounds;
 }
 
