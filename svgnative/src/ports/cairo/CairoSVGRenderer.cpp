@@ -295,6 +295,11 @@ void CairoSVGRenderer::Restore()
     cairo_restore(mCairo);
 }
 
+void CairoSVGRenderer::Reset()
+{
+  cairo_identity_matrix(mCairo);
+}
+
 inline void createCairoPattern(const Paint& paint, float opacity, cairo_pattern_t** pat)
 {
     *pat = NULL;

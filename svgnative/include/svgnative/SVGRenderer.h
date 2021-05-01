@@ -329,6 +329,7 @@ public:
 
     virtual void Save(const GraphicStyle& graphicStyle) = 0;
     virtual void Restore() = 0;
+    virtual void Reset() {}
 
     virtual void DrawPath(
         const Path& path, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle) = 0;

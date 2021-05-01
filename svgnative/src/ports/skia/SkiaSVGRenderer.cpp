@@ -199,6 +199,12 @@ void SkiaSVGRenderer::Restore()
     mCanvas->restore();
 }
 
+void SkiaSVGRenderer::Reset()
+{
+    SVG_ASSERT(mCanvas);
+    mCanvas->resetMatrix();
+}
+
 inline void CreateSkPaint(const Paint& paint, float opacity, SkPaint& skPaint)
 {
     if (paint.type() == typeid(Color))
