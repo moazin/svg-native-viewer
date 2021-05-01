@@ -88,6 +88,7 @@ public:
 
     void Save(const GraphicStyle& graphicStyle) override;
     void Restore() override;
+    void Reset() override;
 
     void DrawPath(const Path& path, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle) override;
     void DrawImage(const ImageData& image, const GraphicStyle& graphicStyle, const Rect& clipArea, const Rect& fillArea) override;

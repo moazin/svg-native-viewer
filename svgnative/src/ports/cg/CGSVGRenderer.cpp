@@ -144,6 +144,13 @@ void CGSVGRenderer::Restore()
     CGContextRestoreGState(mContext);
 }
 
+void CGSVGRenderer::Reset()
+{
+    CGAffineTransform current_t = CGContextGetCTM(mContext);
+    CGAffineTransform inverse_t = CGAffineTransformInvert(current_t);
+    CGContextConcatCTM(mContext, inverse_t);
+}
+
 void CGSVGRenderer::DrawGradientToContext(const Gradient& gradient, float opacity)
 {
     CGGradientDrawingOptions gradientDrawOptions = kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation;
