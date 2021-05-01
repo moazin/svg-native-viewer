@@ -487,7 +487,6 @@ Rect GDIPlusSVGRenderer::PathBounds(const Path& renderPath, const GraphicStyle& 
         Gdiplus::Matrix matrix;
         mContext->GetTransform(&matrix);
         path.get()->GetBounds(&bounds, &matrix);
-        printf("bounds t -> %f %f %f %f\n", bounds.X, bounds.Y, bounds.Width, bounds.Height);
     }
 
     if (strokeStyle.hasStroke)
@@ -553,15 +552,19 @@ Rect GDIPlusSVGRenderer::PathBounds(const Path& renderPath, const GraphicStyle& 
         Gdiplus::Matrix matrix;
         mContext->GetTransform(&matrix);
         path.get()->GetBounds(&bounds, &matrix, pen.get());
-        printf("bounds t -> %f %f %f %f\n", bounds.X, bounds.Y, bounds.Width, bounds.Height);
     }
+
+    Gdiplus::Rect clip_bounds;
+    mContext->GetClipBounds(&clip_bounds);
 
     Restore();
 
     Gdiplus::Size size;
     bounds.GetSize(&size);
-
-    return Rect{(float)bounds.GetLeft(), (float)bounds.GetTop(), (float)size.Width, (float)size.Height};
+    Rect bounds_rectangle{(float)bounds.GetLeft(), (float)bounds.GetTop(), (float)size.Width, (float)size.Height};
+    Gdiplus::Size clip_size;
+    Rect clip_rectangle{(float)clip_bounds.GetLeft(), (float)clip_bounds.GetTop(), (float)clip_bounds.Width, (float)clip_bounds.Height};
+    return bounds_rectangle & clip_rectangle;
 }
 
 
