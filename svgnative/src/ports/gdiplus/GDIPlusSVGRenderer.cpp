@@ -217,14 +217,12 @@ void GDIPlusSVGRenderer::Save(const GraphicStyle& graphicStyle)
         const Gdiplus::Matrix* matrix = &dynamic_cast<GDIPlusSVGTransform*>(graphicStyle.transform.get())->GetMatrix();
         if (matrix != nullptr)
         {
-            mContext->SetTransform(matrix);
+            mContext->MultiplyTransform(matrix, Gdiplus::MatrixOrderPrepend);
         }
     }
-    
+
     if (graphicStyle.clippingPath)
     {
-        // TODO
-        //SVG_ASSERT_MSG(false, "Need to implement svg clipping path!");
         std::unique_ptr<Gdiplus::GraphicsPath> clip_path(dynamic_cast<const GDIPlusSVGPath*>(graphicStyle.clippingPath->path.get())->GetGraphicsPath().Clone());
         if (graphicStyle.clippingPath->transform)
         {
@@ -232,21 +230,25 @@ void GDIPlusSVGRenderer::Save(const GraphicStyle& graphicStyle)
             clip_path->Transform(matrix);
         }
         clip_path->SetFillMode(graphicStyle.clippingPath->clipRule == WindingRule::kNonZero ? Gdiplus::FillMode::FillModeWinding : Gdiplus::FillMode::FillModeAlternate);
-        mContext->SetClip(clip_path.get());
+        mContext->SetClip(clip_path.get(), Gdiplus::CombineModeIntersect);
     }
-    
 
-    if (graphicStyle.opacity < 1.0f)
-    {
-        // TODO
-        SVG_ASSERT_MSG(false, "Need to implement svg opacity!");
-    }
+    float opacity = 1.0;
+    if (mOpacityStack.size() > 0)
+        opacity = mOpacityStack.top();
+    mOpacityStack.push(opacity * graphicStyle.opacity);
 }
 
 void GDIPlusSVGRenderer::Restore()
 {
     mContext->Restore(mStateStack.back());
     mStateStack.pop_back();
+    mOpacityStack.pop();
+}
+
+void GDIPlusSVGRenderer::Reset()
+{
+    mContext->ResetTransform();
 }
 
 std::unique_ptr<Gdiplus::Brush> GDIPlusSVGRenderer::CreateGradientBrush(const Gradient& gradient, float opacity)
@@ -338,7 +340,6 @@ void GDIPlusSVGRenderer::DrawPath(const Path& renderPath, const GraphicStyle& gr
 {
     SVG_ASSERT(mContext);
     Save(graphicStyle);
-    //Gdiplus::GraphicsState savedState = mContext->Save();
 
     std::unique_ptr<Gdiplus::GraphicsPath> path(dynamic_cast<const GDIPlusSVGPath&>(renderPath).GetGraphicsPath().Clone());
     if (fillStyle.fillRule == WindingRule::kEvenOdd)
@@ -433,7 +434,6 @@ void GDIPlusSVGRenderer::DrawPath(const Path& renderPath, const GraphicStyle& gr
     }
 
     Restore();
-    //mContext->Restore(savedState);
 }
 
 void GDIPlusSVGRenderer::DrawImage(const ImageData& image, const GraphicStyle& graphicStyle, const Rect& clipArea, const Rect& fillArea)
@@ -459,7 +459,6 @@ Rect GDIPlusSVGRenderer::PathBounds(const Path& renderPath, const GraphicStyle& 
     Gdiplus::Rect bounds;
     SVG_ASSERT(mContext);
     Save(graphicStyle);
-    //Gdiplus::GraphicsState savedState = mContext->Save();
 
     std::unique_ptr<Gdiplus::GraphicsPath> path(dynamic_cast<const GDIPlusSVGPath&>(renderPath).GetGraphicsPath().Clone());
     if (fillStyle.fillRule == WindingRule::kEvenOdd)
@@ -485,13 +484,10 @@ Rect GDIPlusSVGRenderer::PathBounds(const Path& renderPath, const GraphicStyle& 
             const auto& gradient = boost::get<Gradient>(fillStyle.paint);
             brush = CreateGradientBrush(gradient, fillStyle.fillOpacity);
         }
-        if (graphicStyle.transform)
-        {
-            const Gdiplus::Matrix* matrix = &dynamic_cast<GDIPlusSVGTransform*>(graphicStyle.transform.get())->GetMatrix();
-            path.get()->GetBounds(&bounds, matrix);
-        }
-        else
-            path.get()->GetBounds(&bounds);
+        Gdiplus::Matrix matrix;
+        mContext->GetTransform(&matrix);
+        path.get()->GetBounds(&bounds, &matrix);
+        printf("bounds t -> %f %f %f %f\n", bounds.X, bounds.Y, bounds.Width, bounds.Height);
     }
 
     if (strokeStyle.hasStroke)
@@ -554,16 +550,12 @@ Rect GDIPlusSVGRenderer::PathBounds(const Path& renderPath, const GraphicStyle& 
         }
 
         pen->SetMiterLimit(strokeStyle.miterLimit);
-        if (graphicStyle.transform)
-        {
-            const Gdiplus::Matrix* matrix = &dynamic_cast<GDIPlusSVGTransform*>(graphicStyle.transform.get())->GetMatrix();
-            path.get()->GetBounds(&bounds, matrix, pen.get());
-        }
-        else
-            path.get()->GetBounds(&bounds, nullptr, pen.get());
+        Gdiplus::Matrix matrix;
+        mContext->GetTransform(&matrix);
+        path.get()->GetBounds(&bounds, &matrix, pen.get());
+        printf("bounds t -> %f %f %f %f\n", bounds.X, bounds.Y, bounds.Width, bounds.Height);
     }
 
-    //mContext->Restore(savedState);
     Restore();
 
     Gdiplus::Size size;

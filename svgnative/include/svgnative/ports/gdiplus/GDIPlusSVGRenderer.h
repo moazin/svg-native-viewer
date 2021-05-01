@@ -15,6 +15,7 @@ governing permissions and limitations under the License.
 
 #include "svgnative/SVGRenderer.h"
 #include <gdiplus.h>
+#include <stack>
 
 namespace SVGNative
 {
@@ -92,6 +93,7 @@ public:
 
     void Save(const GraphicStyle& graphicStyle) override;
     void Restore() override;
+    void Reset() override;
 
     void DrawPath(const Path& path, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle) override;
     void DrawImage(const ImageData& image, const GraphicStyle& graphicStyle, const Rect& clipArea, const Rect& fillArea) override;
@@ -112,6 +114,7 @@ private:
 
     Gdiplus::Graphics* mContext{};
     std::vector<Gdiplus::GraphicsState> mStateStack;
+    std::stack<float> mOpacityStack;
 };
 
 } // namespace SVGNative
