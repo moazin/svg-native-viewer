@@ -220,12 +220,21 @@ void GDIPlusSVGRenderer::Save(const GraphicStyle& graphicStyle)
             mContext->SetTransform(matrix);
         }
     }
-
+    
     if (graphicStyle.clippingPath)
     {
         // TODO
-        SVG_ASSERT_MSG(false, "Need to implement svg clipping path!");
+        //SVG_ASSERT_MSG(false, "Need to implement svg clipping path!");
+        std::unique_ptr<Gdiplus::GraphicsPath> clip_path(dynamic_cast<const GDIPlusSVGPath*>(graphicStyle.clippingPath->path.get())->GetGraphicsPath().Clone());
+        if (graphicStyle.clippingPath->transform)
+        {
+            const Gdiplus::Matrix* matrix = &dynamic_cast<GDIPlusSVGTransform*>(graphicStyle.clippingPath->transform.get())->GetMatrix();
+            clip_path->Transform(matrix);
+        }
+        clip_path->SetFillMode(graphicStyle.clippingPath->clipRule == WindingRule::kNonZero ? Gdiplus::FillMode::FillModeWinding : Gdiplus::FillMode::FillModeAlternate);
+        mContext->SetClip(clip_path.get());
     }
+    
 
     if (graphicStyle.opacity < 1.0f)
     {
@@ -328,7 +337,8 @@ std::unique_ptr<Gdiplus::Brush> GDIPlusSVGRenderer::CreateGradientBrush(const Gr
 void GDIPlusSVGRenderer::DrawPath(const Path& renderPath, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle)
 {
     SVG_ASSERT(mContext);
-    Gdiplus::GraphicsState savedState = mContext->Save();
+    Save(graphicStyle);
+    //Gdiplus::GraphicsState savedState = mContext->Save();
 
     std::unique_ptr<Gdiplus::GraphicsPath> path(dynamic_cast<const GDIPlusSVGPath&>(renderPath).GetGraphicsPath().Clone());
     if (fillStyle.fillRule == WindingRule::kEvenOdd)
@@ -344,7 +354,7 @@ void GDIPlusSVGRenderer::DrawPath(const Path& renderPath, const GraphicStyle& gr
         if (fillStyle.paint.type() == typeid(Color))
         {
             auto color = boost::get<Color>(fillStyle.paint);
-            color[3] *= fillStyle.fillOpacity;
+            color[3] *= fillStyle.fillOpacity * graphicStyle.opacity;
 
             Gdiplus::Color brushColor = ColorToGdiplusColor(color);
             brush = std::unique_ptr<Gdiplus::Brush>(new Gdiplus::SolidBrush(brushColor));
@@ -364,7 +374,7 @@ void GDIPlusSVGRenderer::DrawPath(const Path& renderPath, const GraphicStyle& gr
         if (strokeStyle.paint.type() == typeid(Color))
         {
             auto color = boost::get<Color>(strokeStyle.paint);
-            color[3] *= strokeStyle.strokeOpacity;
+            color[3] *= strokeStyle.strokeOpacity * graphicStyle.opacity;
 
             Gdiplus::Color penColor = ColorToGdiplusColor(color);
             pen = std::unique_ptr<Gdiplus::Pen>(new Gdiplus::Pen(penColor, strokeStyle.lineWidth));
@@ -372,7 +382,7 @@ void GDIPlusSVGRenderer::DrawPath(const Path& renderPath, const GraphicStyle& gr
         else if (strokeStyle.paint.type() == typeid(Gradient))
         {
             const auto& gradient = boost::get<Gradient>(fillStyle.paint);
-            brush = CreateGradientBrush(gradient, fillStyle.fillOpacity);
+            brush = CreateGradientBrush(gradient, fillStyle.fillOpacity * graphicStyle.opacity);
             pen = std::unique_ptr<Gdiplus::Pen>(new Gdiplus::Pen(brush.get(), strokeStyle.lineWidth));
         }
 
@@ -422,7 +432,8 @@ void GDIPlusSVGRenderer::DrawPath(const Path& renderPath, const GraphicStyle& gr
         mContext->DrawPath(pen.get(), path.get());
     }
 
-    mContext->Restore(savedState);
+    Restore();
+    //mContext->Restore(savedState);
 }
 
 void GDIPlusSVGRenderer::DrawImage(const ImageData& image, const GraphicStyle& graphicStyle, const Rect& clipArea, const Rect& fillArea)
@@ -442,5 +453,124 @@ void GDIPlusSVGRenderer::DrawImage(const ImageData& image, const GraphicStyle& g
         Restore();
     }
 }
+
+Rect GDIPlusSVGRenderer::PathBounds(const Path& renderPath, const GraphicStyle& graphicStyle, const FillStyle& fillStyle, const StrokeStyle& strokeStyle)
+{
+    Gdiplus::Rect bounds;
+    SVG_ASSERT(mContext);
+    Save(graphicStyle);
+    //Gdiplus::GraphicsState savedState = mContext->Save();
+
+    std::unique_ptr<Gdiplus::GraphicsPath> path(dynamic_cast<const GDIPlusSVGPath&>(renderPath).GetGraphicsPath().Clone());
+    if (fillStyle.fillRule == WindingRule::kEvenOdd)
+        path->SetFillMode(Gdiplus::FillModeAlternate);
+    else
+        path->SetFillMode(Gdiplus::FillModeWinding);
+
+    mContext->SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
+
+    std::unique_ptr<Gdiplus::Brush> brush;
+    if (fillStyle.hasFill)
+    {
+        if (fillStyle.paint.type() == typeid(Color))
+        {
+            auto color = boost::get<Color>(fillStyle.paint);
+            color[3] *= fillStyle.fillOpacity;
+
+            Gdiplus::Color brushColor = ColorToGdiplusColor(color);
+            brush = std::unique_ptr<Gdiplus::Brush>(new Gdiplus::SolidBrush(brushColor));
+        }
+        else if (fillStyle.paint.type() == typeid(Gradient))
+        {
+            const auto& gradient = boost::get<Gradient>(fillStyle.paint);
+            brush = CreateGradientBrush(gradient, fillStyle.fillOpacity);
+        }
+        if (graphicStyle.transform)
+        {
+            const Gdiplus::Matrix* matrix = &dynamic_cast<GDIPlusSVGTransform*>(graphicStyle.transform.get())->GetMatrix();
+            path.get()->GetBounds(&bounds, matrix);
+        }
+        else
+            path.get()->GetBounds(&bounds);
+    }
+
+    if (strokeStyle.hasStroke)
+    {
+        std::unique_ptr<Gdiplus::Pen> pen;
+        if (strokeStyle.paint.type() == typeid(Color))
+        {
+            auto color = boost::get<Color>(strokeStyle.paint);
+            color[3] *= strokeStyle.strokeOpacity;
+
+            Gdiplus::Color penColor = ColorToGdiplusColor(color);
+            pen = std::unique_ptr<Gdiplus::Pen>(new Gdiplus::Pen(penColor, strokeStyle.lineWidth));
+        }
+        else if (strokeStyle.paint.type() == typeid(Gradient))
+        {
+            const auto& gradient = boost::get<Gradient>(fillStyle.paint);
+            brush = CreateGradientBrush(gradient, fillStyle.fillOpacity);
+            pen = std::unique_ptr<Gdiplus::Pen>(new Gdiplus::Pen(brush.get(), strokeStyle.lineWidth));
+        }
+
+        switch (strokeStyle.lineCap)
+        {
+        case LineCap::kButt:
+            pen->SetLineCap(Gdiplus::LineCapFlat, Gdiplus::LineCapFlat, Gdiplus::DashCapFlat);
+            break;
+        case LineCap::kRound:
+            pen->SetLineCap(Gdiplus::LineCapRound, Gdiplus::LineCapRound, Gdiplus::DashCapRound);
+            break;
+        case LineCap::kSquare:
+            pen->SetLineCap(Gdiplus::LineCapSquare, Gdiplus::LineCapSquare, Gdiplus::DashCapFlat);
+            break;
+        }
+
+        switch (strokeStyle.lineJoin)
+        {
+        case LineJoin::kMiter:
+            pen->SetLineJoin(Gdiplus::LineJoinMiter);
+            break;
+        case LineJoin::kRound:
+            pen->SetLineJoin(Gdiplus::LineJoinRound);
+            break;
+        case LineJoin::kBevel:
+            pen->SetLineJoin(Gdiplus::LineJoinBevel);
+            break;
+        }
+
+        if (!strokeStyle.dashArray.empty())
+        {
+            pen->SetDashStyle(Gdiplus::DashStyleDash);
+            pen->SetDashOffset(strokeStyle.dashOffset);
+
+            std::vector<float> dashArray = strokeStyle.dashArray;
+            if (dashArray.size() % 2 == 1)
+            {
+                // Gdiplus doesn't do SVG's odd case which duplicates array to make it even.
+                dashArray.insert(dashArray.end(), strokeStyle.dashArray.begin(), strokeStyle.dashArray.end());
+            }
+
+            pen->SetDashPattern(dashArray.data(), static_cast<int>(dashArray.size()));
+        }
+
+        pen->SetMiterLimit(strokeStyle.miterLimit);
+        if (graphicStyle.transform)
+        {
+            const Gdiplus::Matrix* matrix = &dynamic_cast<GDIPlusSVGTransform*>(graphicStyle.transform.get())->GetMatrix();
+            path.get()->GetBounds(&bounds, matrix, pen.get());
+        }
+        else
+            path.get()->GetBounds(&bounds, nullptr, pen.get());
+    }
+
+    //mContext->Restore(savedState);
+    Restore();
+
+    Gdiplus::Size size;
+    bounds.GetSize(&size);
+
+    return Rect{(float)bounds.GetLeft(), (float)bounds.GetTop(), (float)size.Width, (float)size.Height};
+}
+
 
 } // namespace SVGNative
