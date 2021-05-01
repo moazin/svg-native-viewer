@@ -11,7 +11,8 @@ governing permissions and limitations under the License.
 */
 
 #define WIN32_LEAN_AND_MEAN
-
+#include <iostream>
+#include <fstream>
 #include <tchar.h>
 #include <windows.h>
 #include <unknwn.h>
@@ -39,8 +40,24 @@ MainWinPaintToCanvas(HDC hdc)
     auto renderer = std::shared_ptr<GDIPlusSVGRenderer>(new GDIPlusSVGRenderer);
     renderer->SetGraphicsContext(&graphics);
 
-    auto svgDocument = SVGDocument::CreateSVGDocument(gSVGString.c_str(), renderer);
+    std::ifstream svg_file("svg-docs/fill-exps.svg");
+
+    std::string svg_doc = "";
+    std::string line;
+    while (std::getline(svg_file, line)) {
+        svg_doc += line;
+    }
+    auto svgDocument = SVGDocument::CreateSVGDocument(svg_doc.c_str(), renderer);
+    
     svgDocument->Render();
+    std::vector<SVGNative::Rect> bounds = svgDocument->Bounds();
+
+
+    Pen pen{ Gdiplus::Color{255, 0, 0} };
+    for (int i = 0; i < bounds.size(); i++)
+    {
+        graphics.DrawRectangle(&pen, Gdiplus::Rect{(int)bounds[i].x, (int)bounds[i].y, (int)bounds[i].width, (int)bounds[i].height});
+    }
 }
 
 /* Main window procedure */
@@ -74,6 +91,8 @@ MainWinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 int APIENTRY
 _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
+    std::cout << "Hello world" << std::endl;
+
     WNDCLASS wc = { 0 };
     MSG msg;
 
@@ -93,7 +112,7 @@ _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nC
     /* Create main window */
     hwndMain = CreateWindow(
         _T("main_window"), _T("LibWinDraw Example: Simple Draw"),
-        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 550, 350,
+        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1100, 1100,
         NULL, NULL, hInstance, NULL
     );
     SendMessage(hwndMain, WM_SETFONT, (WPARAM) GetStockObject(DEFAULT_GUI_FONT),

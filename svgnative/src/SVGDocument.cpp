@@ -61,8 +61,9 @@ SVGDocument::~SVGDocument() {}
 
 std::vector<Rect> SVGDocument::Bounds()
 {
+    std::vector<Rect> bounds;
     if (!mDocument)
-        return std::vector<Rect>{};
+        return bounds;
     return mDocument->Bounds();
 }
 
