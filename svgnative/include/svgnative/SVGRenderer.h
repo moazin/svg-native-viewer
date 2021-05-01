@@ -123,8 +123,8 @@ class Interval
         b = u;
       }
     }
-    float min() { return a; }
-    float max() { return b; }
+    float Min() { return a; }
+    float Max() { return b; }
     operator bool()
     {
       return !isEmpty;
@@ -135,8 +135,8 @@ class Interval
         return Interval();
       else
       {
-        float a = std::max(this->min(), other.min());
-        float b = std::min(this->max(), other.max());
+        float a = (std::max)(this->Min(), other.Min());
+        float b = (std::min)(this->Max(), other.Max());
         if (a <= b)
           return Interval(a, b);
         else
@@ -179,10 +179,10 @@ struct Rect
       if (!resultant_x || !resultant_y)
         return Rect{};
       float x0, y0, x1, y1;
-      x0 = resultant_x.min();
-      y0 = resultant_y.min();
-      x1 = resultant_x.max();
-      y1 = resultant_y.max();
+      x0 = resultant_x.Min();
+      y0 = resultant_y.Min();
+      x1 = resultant_x.Max();
+      y1 = resultant_y.Max();
       return Rect{x0, y0, (x1 - x0 + 1), (y1 - y0 + 1)};
     }
     float x = std::numeric_limits<float>::quiet_NaN();
