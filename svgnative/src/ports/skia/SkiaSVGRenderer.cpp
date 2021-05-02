@@ -345,7 +345,7 @@ Rect SkiaSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicSt
     {
       Rect old_bounds{bounds.x(), bounds.y(), bounds.width(), bounds.height()};
       SkIRect clip = mCanvas->getDeviceClipBounds();
-      Rect clip_bounds{clip.x(), clip.y(), clip.width(), clip.height()};
+      Rect clip_bounds{(float)clip.x(), (float)clip.y(), (float)clip.width(), (float)clip.height()};
       Rect new_bounds = old_bounds & clip_bounds;
       printf("orig -> %f %f %f %f\n", old_bounds.x, old_bounds.y, old_bounds.width, old_bounds.height);
       printf("clip -> %f %f %f %f\n", clip_bounds.x, clip_bounds.y, clip_bounds.width, clip_bounds.height);

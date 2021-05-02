@@ -547,12 +547,12 @@ Rect CairoSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicS
 
     cairo_save(mCairo);
     cairo_identity_matrix(mCairo);
-    Rect bounds{x0, y0, (x1 - x0 + 1), (y1 - y0 + 1)};
+    Rect bounds{(float)x0, (float)y0, (float)(x1 - x0 + 1), (float)(y1 - y0 + 1)};
     if (graphicStyle.clippingPath && graphicStyle.clippingPath->path)
     {
         double cx0, cy0, cx1, cy1;
         cairo_clip_extents(mCairo, &cx0, &cy0, &cx1, &cy1);
-        Rect clip_rect{cx0, cy0, (cx1 - cx0 + 1), (cy1 - cy0 + 1)};
+        Rect clip_rect{(float)cx0, (float)cy0, (float)(cx1 - cx0 + 1), (float)(cy1 - cy0 + 1)};
         bounds = clip_rect & bounds;
     }
     cairo_restore(mCairo);
