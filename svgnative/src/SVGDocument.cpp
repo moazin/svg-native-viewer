@@ -59,24 +59,22 @@ SVGDocument::SVGDocument() {}
 
 SVGDocument::~SVGDocument() {}
 
-Rect SVGDocument::Bounds()
+Rect SVGDocument::Bounds(std::shared_ptr<Transform> transform)
 {
-    std::vector<Rect> bounds = BoundsSub();
+    std::vector<Rect> bounds = BoundsSub(transform);
     if (bounds.size() == 0)
         return Rect{}; // TODO: Error?
     Rect bound = bounds[0];
     for(int i = 1; i < bounds.size(); i++)
-    {
         bound = bound + bounds[i];
-    }
-    return Rect;
+    return bound;
 }
-std::vector<Rect> SVGDocument::BoundsSub()
+std::vector<Rect> SVGDocument::BoundsSub(std::shared_ptr<Transform> transform)
 {
     std::vector<Rect> bounds;
     if (!mDocument)
         return bounds;
-    return mDocument->Bounds();
+    return mDocument->Bounds(transform);
 }
 
 void SVGDocument::Render()

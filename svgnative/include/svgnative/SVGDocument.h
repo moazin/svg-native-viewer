@@ -85,12 +85,12 @@ public:
     /**
      * Get bounds of the SVG document.
      */
-    Rect Bounds();
+    Rect Bounds(std::shared_ptr<Transform> transform = nullptr);
 
     /**
      * Gets all the bounds of all the paths in the SVG document.
      */
-    std::vector<Rect> BoundsSub();
+    std::vector<Rect> BoundsSub(std::shared_ptr<Transform> transform = nullptr);
 
     /**
      * Renders the parsed SVG document to renderer. Some clients require a separation

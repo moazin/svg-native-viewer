@@ -192,7 +192,7 @@ public:
     void AddCustomCSS(const StyleSheet::CssDocument* cssDocument);
     void ClearCustomCSS();
 #endif
-    std::vector<Rect> Bounds();
+    std::vector<Rect> Bounds(std::shared_ptr<Transform> transform = nullptr);
     void Render(const ColorMap& colorMap, float width, float height);
     void Render(const char* id, const ColorMap& colorMap, float width, float height);
 

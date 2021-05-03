@@ -36,12 +36,18 @@ governing permissions and limitations under the License.
 
 	renderer->SetGraphicsContext(ctx);
 
-	doc->Render();
-    std::vector<SVGNative::Rect> bounding_boxes = doc->Bounds();
-
+    std::unique_ptr<SVGNative::Transform> transform = renderer->CreateTransform();
+    transform->Scale(0.8, 1);
+    std::vector<SVGNative::Rect> bounding_boxes = doc->BoundsSub(std::move(transform));
+    CGContextSaveGState(ctx);
+    CGContextScaleCTM(ctx, 0.8, 1);
+    doc->Render();
+    CGContextRestoreGState(ctx);
+    /*
     CGAffineTransform current_t = CGContextGetCTM(ctx);
     CGAffineTransform inverse_t = CGAffineTransformInvert(current_t);
     CGContextConcatCTM(ctx, inverse_t);
+     */
     for(unsigned long i = 0; i < bounding_boxes.size(); i++)
     {
         SVGNative::Rect box = bounding_boxes[i];
