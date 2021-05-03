@@ -83,9 +83,14 @@ public:
 #endif
 
     /**
+     * Get bounds of the SVG document.
+     */
+    Rect Bounds();
+
+    /**
      * Gets all the bounds of all the paths in the SVG document.
      */
-    std::vector<Rect> Bounds();
+    std::vector<Rect> BoundsSub();
 
     /**
      * Renders the parsed SVG document to renderer. Some clients require a separation

@@ -59,7 +59,19 @@ SVGDocument::SVGDocument() {}
 
 SVGDocument::~SVGDocument() {}
 
-std::vector<Rect> SVGDocument::Bounds()
+Rect SVGDocument::Bounds()
+{
+    std::vector<Rect> bounds = BoundsSub();
+    if (bounds.size() == 0)
+        return Rect{}; // TODO: Error?
+    Rect bound = bounds[0];
+    for(int i = 1; i < bounds.size(); i++)
+    {
+        bound = bound + bounds[i];
+    }
+    return Rect;
+}
+std::vector<Rect> SVGDocument::BoundsSub()
 {
     std::vector<Rect> bounds;
     if (!mDocument)
