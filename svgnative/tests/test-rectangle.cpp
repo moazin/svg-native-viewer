@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "gtest/gtest.h"
-#include <SVGRenderer.h>
+#include <svgnative/SVGRenderer.h>
 
 TEST(rectangle_tests, basic_rectangle_test)
 {
@@ -76,4 +76,23 @@ TEST(rectangle_tests, rectangle_intersection_test)
     EXPECT_EQ(result.width, 40);
     EXPECT_EQ(result.height, 40);
   }
+}
+
+TEST(rectangle_tests, rectangle_interval_test)
+{
+    SVGNative::Rect rect_a{10, 10, 100, 100};
+    SVGNative::Rect rect_b{10, 10, 100, 100}; // inside
+    SVGNative::Rect rect_c{10, 10, 50, 50};   // inside
+    SVGNative::Rect rect_d{10, 10, 101, 101}; // outside
+    SVGNative::Rect rect_e{50, 50, 10, 10};   // inside
+    SVGNative::Rect rect_f{9, 9, 100, 100};   // outside
+    SVGNative::Rect rect_g{-10, -10, 100, 100};//outside
+    SVGNative::Rect rect_h{10, 10, 101, 100}; // outside
+    EXPECT_EQ(rect_a.contains(rect_b), true);
+    EXPECT_EQ(rect_a.contains(rect_c), true);
+    EXPECT_EQ(rect_a.contains(rect_d), false);
+    EXPECT_EQ(rect_a.contains(rect_e), true);
+    EXPECT_EQ(rect_a.contains(rect_f), false);
+    EXPECT_EQ(rect_a.contains(rect_g), false);
+    EXPECT_EQ(rect_a.contains(rect_h), false);
 }

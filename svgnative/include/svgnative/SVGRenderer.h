@@ -143,6 +143,10 @@ class Interval
           return Interval();
       }
     }
+    bool contains(Interval other)
+    {
+        return this->Min() <= other.Min() && this->Max() >= other.Max();
+    }
   private:
     float a = std::numeric_limits<float>::quiet_NaN();
     float b = std::numeric_limits<float>::quiet_NaN();
@@ -184,6 +188,16 @@ struct Rect
       x1 = resultant_x.Max();
       y1 = resultant_y.Max();
       return Rect{x0, y0, (x1 - x0 + 1), (y1 - y0 + 1)};
+    }
+    bool contains(Rect other)
+    {
+      std::tuple<Interval, Interval> intervals_a = intervals();
+      std::tuple<Interval, Interval> intervals_b = other.intervals();
+      Interval a_x = std::get<0>(intervals_a);
+      Interval a_y = std::get<1>(intervals_a);
+      Interval b_x = std::get<0>(intervals_b);
+      Interval b_y = std::get<1>(intervals_b);
+      return (a_x.contains(b_x) && a_y.contains(b_y));
     }
     float x = std::numeric_limits<float>::quiet_NaN();
     float y = std::numeric_limits<float>::quiet_NaN();
