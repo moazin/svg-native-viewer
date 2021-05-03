@@ -934,14 +934,18 @@ void SVGDocumentImpl::ParseGradient(XMLNode* node)
         mGradients.insert({attr.value, gradient});
 }
 
-std::vector<Rect> SVGDocumentImpl::Bounds()
+std::vector<Rect> SVGDocumentImpl::Bounds(std::shared_ptr<Transform> transform)
 {
     SVG_ASSERT(mGroup);
     if (!mGroup)
         return std::vector<Rect>{};
     mRenderer->Save(GraphicStyle());
     mRenderer->Reset();
+    GraphicStyle graphicStyle;
+    graphicStyle.transform = transform;
+    mRenderer->Save(graphicStyle);
     ExtractBounds(*mGroup);
+    mRenderer->Restore();
     mRenderer->Restore();
     return mBounds;
 }

@@ -199,6 +199,39 @@ struct Rect
       Interval b_y = std::get<1>(intervals_b);
       return (a_x.contains(b_x) && a_y.contains(b_y));
     }
+    Rect operator+(Rect other)
+    {
+        float points[8][2];
+        points[0][0] = other.x;
+        points[0][1] = other.y;
+        points[1][0] = other.x + other.width - 1;
+        points[1][1] = other.y;
+        points[2][0] = other.x;
+        points[2][1] = other.y + other.height - 1;
+        points[3][0] = other.x + other.width - 1;
+        points[3][1] = other.y + other.height - 1;
+        points[4][0] = x;
+        points[4][1] = y;
+        points[5][0] = x + width - 1;
+        points[5][1] = y;
+        points[6][0] = x;
+        points[6][1] = y + height - 1;
+        points[7][0] = x + width - 1;
+        points[7][1] = y + height - 1;
+        float min_x = points[0][0], max_x = points[1][0], min_y = points[0][1], max_y = points[1][1];
+        for(int i = 0; i < 8; i++)
+        {
+            if (min_x > points[i][0])
+                min_x = points[i][0];
+            if (max_x < points[i][0])
+                max_x = points[i][0];
+            if (min_y > points[i][1])
+                min_y = points[i][1];
+            if (max_y < points[i][1])
+                max_y = points[i][1];
+        }
+        return Rect{min_x, min_y, (max_x - min_x + 1), (max_y - min_y + 1)};
+    }
     float x = std::numeric_limits<float>::quiet_NaN();
     float y = std::numeric_limits<float>::quiet_NaN();
     float width = std::numeric_limits<float>::quiet_NaN();
