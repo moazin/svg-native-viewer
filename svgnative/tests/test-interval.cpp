@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "gtest/gtest.h"
-#include <SVGRenderer.h>
+#include <svgnative/SVGRenderer.h>
 
 TEST(interval_tests, basic_interval_test)
 {
@@ -73,5 +73,22 @@ TEST(interval_tests, intersection_test)
     EXPECT_EQ(c.Max(), 15);
   }
 
+}
+
+TEST(interval_tests, interval_contains_test)
+{
+    SVGNative::Interval a(10, 15);
+    SVGNative::Interval b(11, 14);
+    SVGNative::Interval c(13, 16);
+    SVGNative::Interval d(10, 12);
+    SVGNative::Interval e(12, 15);
+    SVGNative::Interval f(10, 16);
+    SVGNative::Interval g(10, 15);
+    EXPECT_EQ(a.contains(b), true);
+    EXPECT_EQ(a.contains(c), false);
+    EXPECT_EQ(a.contains(d), true);
+    EXPECT_EQ(a.contains(e), true);
+    EXPECT_EQ(a.contains(f), false);
+    EXPECT_EQ(a.contains(g), true);
 }
 
