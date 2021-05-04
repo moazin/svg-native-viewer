@@ -10,7 +10,7 @@ int main(void)
     State *state;
     initialize(&state, 1000, 1000);
 
-    drawing(state);
+    //drawing(state);
 
     SDL_Event event;
     while(1){
@@ -54,6 +54,16 @@ int main(void)
                 {
                     moveTransform(state, 1, 0);
                     drawing(state);
+                }
+                else if(ke.keysym.scancode == 30) // 1 number key
+                {
+                    drawing(state);
+                    displayBuffer(state, 0);
+                }
+                else if(ke.keysym.scancode == 31) // 2 number key
+                {
+                    drawing(state);
+                    displayBuffer(state, 1);
                 }
                 else
                 {

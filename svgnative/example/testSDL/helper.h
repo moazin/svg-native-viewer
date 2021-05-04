@@ -63,3 +63,5 @@ void setTransform(State *state);
  * and Negative `1` means down or left.
  */
 void moveTransform(State *state, int x, int y);
+
+void displayBuffer(State *state, int index);
