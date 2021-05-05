@@ -5,12 +5,12 @@
 #include "helper.h"
 
 
-int main(void)
+int main(int argc, char **argv)
 {
     State *state;
     initialize(&state, 1000, 1000);
 
-    //drawing(state);
+    doTheDrawing(state);
 
     SDL_Event event;
     while(1){
@@ -23,52 +23,69 @@ int main(void)
                 else if(ke.keysym.scancode == 39) // 0 key in number row
                 {
                     resetTransform(state);
-                    drawing(state);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 45) // - sign in number row
                 {
                     zoomOutTransform(state);
-                    drawing(state);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 46) // + sign in number row
                 {
                     zoomInTransform(state);
-                    drawing(state);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 11) // left vim (h)
                 {
                     moveTransform(state, -1, 0);
-                    drawing(state);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 13) // down vim (j)
                 {
                     moveTransform(state, 0, 1);
-                    drawing(state);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 14) // up vim (k)
                 {
                     moveTransform(state, 0, -1);
-                    drawing(state);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 15) // right vim (l)
                 {
                     moveTransform(state, 1, 0);
-                    drawing(state);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 30) // 1 number key
                 {
-                    drawing(state);
-                    displayBuffer(state, 0);
+                    setRenderer(state, 0);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 31) // 2 number key
                 {
-                    drawing(state);
-                    displayBuffer(state, 1);
+                    setRenderer(state, 1);
+                    doTheDrawing(state);
                 }
                 else if(ke.keysym.scancode == 32) // 3 number key
                 {
-                    drawing(state);
-                    displayBuffer(state, 2);
+                    setRenderer(state, 2);
+                    doTheDrawing(state);
+                }
+                else if(ke.keysym.scancode == 33) // 4 number key
+                {
+                    setRenderer(state, 3);
+                    doTheDrawing(state);
+                }
+                else if(ke.keysym.scancode == 79) // right arrow
+                {
+                    nextSVG(state);
+                    loadCurrentSVG(state);
+                    doTheDrawing(state);
+                }
+                else if(ke.keysym.scancode == 80) // left arrow
+                {
+                    prevSVG(state);
+                    loadCurrentSVG(state);
+                    doTheDrawing(state);
                 }
                 else
                 {

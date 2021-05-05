@@ -12,6 +12,26 @@ typedef struct _State State;
 int initialize(State **state, int width, int height);
 
 /**
+ * Load all files.
+ */
+void loadFiles(State *state);
+
+/**
+ * Read an SVG file into string.
+ */
+void loadCurrentSVG(State *state);
+
+/**
+ * Switch to the next SVG document.
+ */
+void nextSVG(State *state);
+
+/**
+ * Switch to the previous SVG document.
+ */
+void prevSVG(State *state);
+
+/**
  * Destroy the state object, freeing all associated memory.
  */
 void destroy(State *state);
@@ -29,9 +49,24 @@ void clearCanvas(State *state);
 void drawRectangle(State *state, float x0, float y0, float x1, float y1, double r, double g, double b, int line_width);
 
 /**
+ * Draw the SVG document in the current renderer given the current transform.
+ */
+void drawSVGDocument(State *state);
+
+/**
+ * Clear the port specific rendering.
+ */
+void clearSVGDocument(State *state);
+
+/**
+ * Set the renderer.
+ */
+void setRenderer(State *state, int index);
+
+/**
  * TODO:
  */
-void drawing(State *state);
+void doTheDrawing(State *state);
 
 /**
  * Change the current ViewBox so that it reduces on its spot from all sides. Has the
@@ -63,5 +98,4 @@ void setTransform(State *state);
  * and Negative `1` means down or left.
  */
 void moveTransform(State *state, int x, int y);
-
 void displayBuffer(State *state, int index);
