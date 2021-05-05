@@ -65,6 +65,11 @@ int main(void)
                     drawing(state);
                     displayBuffer(state, 1);
                 }
+                else if(ke.keysym.scancode == 32) // 3 number key
+                {
+                    drawing(state);
+                    displayBuffer(state, 2);
+                }
                 else
                 {
                     printf("Key pressed: %d\n", ke.keysym.scancode);

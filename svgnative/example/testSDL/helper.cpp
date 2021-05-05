@@ -145,7 +145,7 @@ int initialize(State **_state, int width, int height) {
 #ifdef USE_CG
     {
         state->d_cg_color_space = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
-        state->d_cg_context = CGBitmapContextCreate(NULL, state->width, state->height, 8, 0, state->d_cg_color_space, kCGImageAlphaNone);
+        state->d_cg_context = CGBitmapContextCreate(NULL, state->width, state->height, 8, state->width * 4, state->d_cg_color_space, kCGImageAlphaNoneSkipFirst);
         int width = CGBitmapContextGetWidth(state->d_cg_context);
         int height = CGBitmapContextGetHeight(state->d_cg_context);
         unsigned char *data = (unsigned char*)CGBitmapContextGetData(state->d_cg_context);
@@ -360,12 +360,24 @@ void drawSkia(State *state)
     state->d_skia_canvas->flush();
 }
 
+void drawCoreGraphics(State *state)
+{
+	CGAffineTransform m = {1.0, 0.0, 0.0, -1.0, 0.0, (float)state->height};
+    CGContextConcatCTM(state->d_cg_context, m);
+    CGContextSetLineWidth(state->d_cg_context, 1.0);
+    CGContextSetRGBStrokeColor(state->d_cg_context, 0.0, 1.0, 0.0, 1.0);
+    CGContextAddRect(state->d_cg_context, CGRect{CGPoint{200, 200}, CGSize{200, 200}});
+    CGContextStrokePath(state->d_cg_context);
+}
+
 void displayBuffer(State *state, int index)
 {
     if (index == 0){
         gdk_pixbuf_scale(state->d_cairo_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
     } else if(index == 1){
         gdk_pixbuf_scale(state->d_skia_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
+    } else if (index == 2){
+        gdk_pixbuf_scale(state->d_cg_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
     }
     SDL_UpdateWindowSurface(state->window);
 }
@@ -377,6 +389,7 @@ void drawing(State *state)
 
     drawCairo(state);
     drawSkia(state);
+    drawCoreGraphics(state);
 
     drawStateText(state);
 }
