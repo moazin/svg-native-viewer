@@ -899,8 +899,8 @@ void computeDiff(State *state, GdkPixbuf *standard, GdkPixbuf *provided, GdkPixb
             *(data_result + r*stride + c*4 + 3) = 0;
             /* compare standard with provided putting the result in result */
             float diff = sqrt(pow(*(data_standard + r*stride + c*4) - *(data_provided + r*stride + c*4), 2) +
-                              pow(*(data_standard + r*stride + c*4) - *(data_provided + r*stride + c*4), 2) +
-                              pow(*(data_standard + r*stride + c*4) - *(data_provided + r*stride + c*4), 2))/3.0;
+                              pow(*(data_standard + r*stride + c*4 + 1) - *(data_provided + r*stride + c*4 + 1), 2) +
+                              pow(*(data_standard + r*stride + c*4 + 2) - *(data_provided + r*stride + c*4 + 2), 2))/3.0;
             diff = (diff / 255.0) * 100.0;
             if (diff > 0){
                 pixels_diff++;
