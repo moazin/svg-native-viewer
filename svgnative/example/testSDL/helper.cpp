@@ -1,6 +1,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <cmath>
 
 #include "helper.h"
 
@@ -39,7 +40,8 @@ typedef enum _Renderer {
 } Renderer;
 
 typedef enum _View {
-    VIEW_FREE_HAND
+    VIEW_FREE_HAND,
+    VIEW_CMP
 } View;
 
 typedef struct _viewBox {
@@ -70,6 +72,7 @@ typedef struct _State {
     Renderer renderer = RENDERER_LIBRSVG;
     bool show_bbox = false;
     bool show_sub_bbox = false;
+    bool show_diff = false;
     int current_svg_document = 0;
     std::string svg_document;
 #ifdef USE_CAIRO
@@ -80,6 +83,8 @@ typedef struct _State {
     std::vector<SVGNative::Rect> d_cairo_bounds;
     bool d_cairo_is_bbox_good = false;
     float d_cairo_bbox_percentage_larger = 0;
+    GdkPixbuf *d_cairo_diff_pixbuf;
+    float d_cairo_percentage_diff = 0;
 #endif
 #ifdef USE_SKIA
     SkImageInfo d_skia_image_info;
@@ -91,6 +96,8 @@ typedef struct _State {
     std::vector<SVGNative::Rect> d_skia_bounds;
     bool d_skia_is_bbox_good = false;
     float d_skia_bbox_percentage_larger = 0;
+    GdkPixbuf *d_skia_diff_pixbuf;
+    float d_skia_percentage_diff = 0;
 #endif
 #ifdef USE_CG
     CGContextRef d_cg_context;
@@ -100,6 +107,8 @@ typedef struct _State {
     std::vector<SVGNative::Rect> d_cg_bounds;
     bool d_cg_is_bbox_good = false;
     float d_cg_bbox_percentage_larger = 0;
+    GdkPixbuf *d_cg_diff_pixbuf;
+    float d_cg_percentage_diff = 0;
 #endif
 } _State;
 
@@ -183,6 +192,7 @@ int initialize(State **_state, int width, int height) {
         int stride = cairo_image_surface_get_stride(state->d_cairo_surface);
         unsigned char *data = cairo_image_surface_get_data(state->d_cairo_surface);
         state->d_cairo_pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, true, 8, width, height, stride, NULL, NULL);
+        state->d_cairo_diff_pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, true, 8, width, height);
     }
 #endif
 
@@ -197,6 +207,7 @@ int initialize(State **_state, int width, int height) {
         int height = pixmap.height();
         int stride = pixmap.rowBytes();
         state->d_skia_pixbuf = gdk_pixbuf_new_from_data((unsigned char*)pixmap.addr(), GDK_COLORSPACE_RGB, true, 8, width, height, stride, NULL, NULL);
+        state->d_skia_diff_pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, true, 8, width, height);
     }
 #endif
 
@@ -209,6 +220,7 @@ int initialize(State **_state, int width, int height) {
         unsigned char *data = (unsigned char*)CGBitmapContextGetData(state->d_cg_context);
         int stride = CGBitmapContextGetBytesPerRow(state->d_cg_context);
         state->d_cg_pixbuf = gdk_pixbuf_new_from_data((unsigned char*)data, GDK_COLORSPACE_RGB, true, 8, width, height, stride, NULL, NULL);
+        state->d_cg_diff_pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, true, 8, width, height);
     }
 #endif
 
@@ -511,6 +523,16 @@ void drawStateText(State *state)
     cairo_show_text(state->cr, characters);
     base_y += 20;
 
+    if (state->show_diff){
+        sprintf(characters, "Show Diff: True");
+    } else {
+        sprintf(characters, "Show Diff: False");
+    }
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+
     SVGNative::Rect bound = state->d_librsvg_bound;
     sprintf(characters, "Librsvg Bounds: %.4f %.4f %.4f %.4f\n", bound.x, bound.y, bound.width, bound.height);
     cairo_move_to(state->cr, base_x, base_y);
@@ -538,6 +560,30 @@ void drawStateText(State *state)
     cairo_show_text(state->cr, characters);
     base_y += 20;
 
+    if (state->view == VIEW_FREE_HAND){
+        sprintf(characters, "View: Freehand\n");
+    } else {
+        sprintf(characters, "View: Comparison\n");
+    }
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+    if (state->view == VIEW_CMP){
+        sprintf(characters, "SNV (Cairo) diff Librsvg: %.2f %%", state->d_cairo_percentage_diff);
+        cairo_move_to(state->cr, base_x, base_y);
+        cairo_show_text(state->cr, characters);
+        base_y += 20;
+        sprintf(characters, "SNV (Skia) diff Librsvg: %.2f %%", state->d_skia_percentage_diff);
+        cairo_move_to(state->cr, base_x, base_y);
+        cairo_show_text(state->cr, characters);
+        base_y += 20;
+        sprintf(characters, "SNV (CG) diff Librsvg: %.2f %%", state->d_cg_percentage_diff);
+        cairo_move_to(state->cr, base_x, base_y);
+        cairo_show_text(state->cr, characters);
+        base_y += 20;
+    }
+
     cairo_surface_flush(state->cairo_surface);
     SDL_UpdateWindowSurface(state->window);
     cairo_restore(state->cr);
@@ -552,71 +598,76 @@ void displayBuffer(State *state, int index)
     } else if (index == 2){
         gdk_pixbuf_scale(state->d_skia_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
     } else if (index == 3){
-        int width = CGBitmapContextGetWidth(state->d_cg_context);
-        int height = CGBitmapContextGetHeight(state->d_cg_context);
-        unsigned char *data = (unsigned char*)CGBitmapContextGetData(state->d_cg_context);
-        int stride = CGBitmapContextGetBytesPerRow(state->d_cg_context);
-        for(int r = 0; r < height; r++){
-            for(int c = 0; c < width; c++){
-                int red = *(data + r*stride + c*4);
-                int green = *(data + r*stride + c*4 + 1);
-                int blue = *(data + r*stride + c*4 + 2);
-                *(data + r*stride + c*4) = blue;
-                *(data + r*stride + c*4 + 2) = red;
-            }
-        }
         gdk_pixbuf_scale(state->d_cg_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
     }
+}
+
+void clearSVGDocumentLibrsvg(State *state){
+    cairo_save(state->d_librsvg_cr);
+    cairo_identity_matrix(state->d_librsvg_cr);
+    cairo_set_source_rgb(state->d_librsvg_cr, 1.0, 1.0, 1.0);
+    cairo_rectangle(state->d_librsvg_cr, 0, 0, state->width, state->height);
+    cairo_fill(state->d_librsvg_cr);
+    cairo_restore(state->d_librsvg_cr);
+    cairo_surface_flush(state->d_librsvg_surface);
+}
+
+void clearSVGDocumentCairo(State *state){
+    cairo_save(state->d_cairo_cr);
+    cairo_identity_matrix(state->d_cairo_cr);
+    cairo_set_source_rgb(state->d_cairo_cr, 1.0, 1.0, 1.0);
+    cairo_rectangle(state->d_cairo_cr, 0, 0, state->width, state->height);
+    cairo_fill(state->d_cairo_cr);
+    cairo_restore(state->d_cairo_cr);
+    cairo_surface_flush(state->d_cairo_surface);
+}
+
+void clearSVGDocumentSkia(State *state)
+{
+    state->d_skia_canvas->save();
+    state->d_skia_canvas->resetMatrix();
+    SkPath path;
+    path.moveTo(0, 0);
+    path.lineTo(state->width - 1, 0);
+    path.lineTo(state->width - 1, state->height - 1);
+    path.lineTo(0, state->height - 1);
+    path.close();
+    SkPaint paint;
+    paint.setStyle(SkPaint::kFill_Style);
+    paint.setColor(SK_ColorWHITE);
+    state->d_skia_canvas->drawPath(path, paint);
+    state->d_skia_canvas->restore();
+}
+
+void clearSVGDocumentCG(State *state)
+{
+    CGContextSaveGState(state->d_cg_context);
+    CGAffineTransform current_t = CGContextGetCTM(state->d_cg_context);
+    CGAffineTransform inverse_t = CGAffineTransformInvert(current_t);
+    CGContextConcatCTM(state->d_cg_context, inverse_t);
+    CGContextSetRGBFillColor(state->d_cg_context, 1.0, 1.0, 1.0, 1.0);
+    CGContextAddRect(state->d_cg_context, CGRect{CGPoint{0, 0}, CGSize{(float)state->width, (float)state->height}});
+    CGContextFillPath(state->d_cg_context);
+    CGContextRestoreGState(state->d_cg_context);
 }
 
 void clearSVGDocument(State *state)
 {
     if (state->renderer == RENDERER_LIBRSVG)
     {
-        cairo_save(state->d_librsvg_cr);
-        cairo_identity_matrix(state->d_librsvg_cr);
-        cairo_set_source_rgb(state->d_librsvg_cr, 1.0, 1.0, 1.0);
-        cairo_rectangle(state->d_librsvg_cr, 0, 0, state->width, state->height);
-        cairo_fill(state->d_librsvg_cr);
-        cairo_restore(state->d_librsvg_cr);
-        cairo_surface_flush(state->d_librsvg_surface);
+        clearSVGDocumentLibrsvg(state);
     }
     else if(state->renderer == RENDERER_SNV_CAIRO)
     {
-        cairo_save(state->d_cairo_cr);
-        cairo_identity_matrix(state->d_cairo_cr);
-        cairo_set_source_rgb(state->d_cairo_cr, 1.0, 1.0, 1.0);
-        cairo_rectangle(state->d_cairo_cr, 0, 0, state->width, state->height);
-        cairo_fill(state->d_cairo_cr);
-        cairo_restore(state->d_cairo_cr);
-        cairo_surface_flush(state->d_cairo_surface);
+        clearSVGDocumentCairo(state);
     }
     else if(state->renderer == RENDERER_SNV_SKIA)
     {
-        state->d_skia_canvas->save();
-        state->d_skia_canvas->resetMatrix();
-        SkPath path;
-        path.moveTo(0, 0);
-        path.lineTo(state->width - 1, 0);
-        path.lineTo(state->width - 1, state->height - 1);
-        path.lineTo(0, state->height - 1);
-        path.close();
-        SkPaint paint;
-        paint.setStyle(SkPaint::kFill_Style);
-        paint.setColor(SK_ColorWHITE);
-        state->d_skia_canvas->drawPath(path, paint);
-        state->d_skia_canvas->restore();
+        clearSVGDocumentSkia(state);
     }
     else if(state->renderer == RENDERER_SNV_CG)
     {
-        CGContextSaveGState(state->d_cg_context);
-        CGAffineTransform current_t = CGContextGetCTM(state->d_cg_context);
-        CGAffineTransform inverse_t = CGAffineTransformInvert(current_t);
-        CGContextConcatCTM(state->d_cg_context, inverse_t);
-        CGContextSetRGBFillColor(state->d_cg_context, 1.0, 1.0, 1.0, 1.0);
-        CGContextAddRect(state->d_cg_context, CGRect{CGPoint{0, 0}, CGSize{(float)state->width, (float)state->height}});
-        CGContextFillPath(state->d_cg_context);
-        CGContextRestoreGState(state->d_cg_context);
+        clearSVGDocumentCG(state);
     }
 }
 
@@ -632,50 +683,83 @@ void setRenderer(State *state, int index)
         state->renderer = RENDERER_SNV_CG;
 }
 
+void drawSVGDocumentLibrsvg(State *state)
+{
+    clearSVGDocumentLibrsvg(state);
+    GError *error = nullptr;
+    const char *data = state->svg_document.c_str();
+    long size_document = strlen(data);
+    RsvgHandle *handle = rsvg_handle_new_from_data((const unsigned char*)data, size_document, &error);
+    rsvg_handle_render_cairo(handle, state->d_librsvg_cr);
+    g_object_unref(handle);
+    cairo_surface_flush(state->d_librsvg_surface);
+}
+
+void drawSVGDocumentSNVCairo(State *state)
+{
+    clearSVGDocumentCairo(state);
+    auto renderer = std::make_shared<SVGNative::CairoSVGRenderer>();
+    std::string copy_doc = state->svg_document;
+    auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
+    renderer->SetCairo(state->d_cairo_cr);
+    doc->Render();
+    cairo_surface_flush(state->d_cairo_surface);
+}
+
+void drawSVGDocumentSNVSkia(State *state)
+{
+    clearSVGDocumentSkia(state);
+    auto renderer = std::make_shared<SVGNative::SkiaSVGRenderer>();
+    renderer->SetSkCanvas(state->d_skia_canvas);
+    std::string copy_doc = state->svg_document;
+    auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
+    doc->Render();
+    state->d_skia_surface->flush();
+}
+
+void drawSVGDocumentSNVCG(State *state)
+{
+    clearSVGDocumentCG(state);
+    std::string copy_doc = state->svg_document;
+    std::shared_ptr<SVGNative::CGSVGRenderer> renderer = std::make_shared<SVGNative::CGSVGRenderer>(SVGNative::CGSVGRenderer());
+    renderer->SetGraphicsContext(state->d_cg_context);
+    auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
+    doc->Render();
+    int width = CGBitmapContextGetWidth(state->d_cg_context);
+    int height = CGBitmapContextGetHeight(state->d_cg_context);
+    unsigned char *data = (unsigned char*)CGBitmapContextGetData(state->d_cg_context);
+    int stride = CGBitmapContextGetBytesPerRow(state->d_cg_context);
+    for(int r = 0; r < height; r++){
+        for(int c = 0; c < width; c++){
+            int red = *(data + r*stride + c*4);
+            int green = *(data + r*stride + c*4 + 1);
+            int blue = *(data + r*stride + c*4 + 2);
+            *(data + r*stride + c*4) = blue;
+            *(data + r*stride + c*4 + 2) = red;
+        }
+    }
+}
+
 void drawSVGDocument(State *state)
 {
     if (state->renderer == RENDERER_LIBRSVG)
     {
-        clearSVGDocument(state);
-        GError *error = nullptr;
-        const char *data = state->svg_document.c_str();
-        long size_document = strlen(data);
-        RsvgHandle *handle = rsvg_handle_new_from_data((const unsigned char*)data, size_document, &error);
-        rsvg_handle_render_cairo(handle, state->d_librsvg_cr);
-        g_object_unref(handle);
-        cairo_surface_flush(state->d_librsvg_surface);
+        drawSVGDocumentLibrsvg(state);
         displayBuffer(state, 0);
     }
     else if(state->renderer == RENDERER_SNV_CAIRO)
     {
-        clearSVGDocument(state);
-        auto renderer = std::make_shared<SVGNative::CairoSVGRenderer>();
-        std::string copy_doc = state->svg_document;
-        auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
-        renderer->SetCairo(state->d_cairo_cr);
-        doc->Render();
-        cairo_surface_flush(state->d_cairo_surface);
+        drawSVGDocumentSNVCairo(state);
         displayBuffer(state, 1);
     }
     else if(state->renderer == RENDERER_SNV_SKIA)
     {
-        clearSVGDocument(state);
-        auto renderer = std::make_shared<SVGNative::SkiaSVGRenderer>();
-        renderer->SetSkCanvas(state->d_skia_canvas);
-        std::string copy_doc = state->svg_document;
-        auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
-        doc->Render();
-        state->d_skia_surface->flush();
+        drawSVGDocumentSNVSkia(state);
         displayBuffer(state, 2);
     }
     else if(state->renderer == RENDERER_SNV_CG)
     {
-        clearSVGDocument(state);
-        std::string copy_doc = state->svg_document;
-        std::shared_ptr<SVGNative::CGSVGRenderer> renderer = std::make_shared<SVGNative::CGSVGRenderer>(SVGNative::CGSVGRenderer());
-        renderer->SetGraphicsContext(state->d_cg_context);
-        auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
-        doc->Render();
+        drawSVGDocumentSNVCG(state);
         displayBuffer(state, 3);
     }
 }
@@ -775,12 +859,71 @@ void drawBoundingBoxes(State *state)
     SDL_UpdateWindowSurface(state->window);
 }
 
+void toggleDiff(State *state){
+    state->show_diff = !state->show_diff;
+}
+
+void drawFrozenImage(State *state)
+{
+    double width_box = state->viewbox.x1 - state->viewbox.x0 + 1;
+    double height_box = state->viewbox.y1 - state->viewbox.y0 + 1;
+    double scale_x = state->width/width_box;
+    double scale_y = state->height/height_box;
+    if (state->renderer == RENDERER_LIBRSVG){
+        gdk_pixbuf_scale(state->d_librsvg_pixbuf, state->pixbuf, 0, 0, state->width, state->height, -1 * state->viewbox.x0 * scale_x, -1 * state->viewbox.y0 * scale_y, scale_x, scale_y, GDK_INTERP_NEAREST);
+    } else if(state->renderer == RENDERER_SNV_CAIRO){
+        gdk_pixbuf_scale(state->show_diff ? state->d_cairo_diff_pixbuf : state->d_cairo_pixbuf, state->pixbuf, 0, 0, state->width, state->height, -1 * state->viewbox.x0 * scale_x, -1 * state->viewbox.y0 * scale_y, scale_x, scale_y, GDK_INTERP_NEAREST);
+    } else if (state->renderer == RENDERER_SNV_SKIA){
+        gdk_pixbuf_scale(state->show_diff ? state->d_skia_diff_pixbuf : state->d_skia_pixbuf, state->pixbuf, 0, 0, state->width, state->height, -1 * state->viewbox.x0 * scale_x, -1 * state->viewbox.y0 * scale_y, scale_x, scale_y, GDK_INTERP_NEAREST);
+    } else if (state->renderer == RENDERER_SNV_CG){
+        gdk_pixbuf_scale(state->show_diff ? state->d_cg_diff_pixbuf : state->d_cg_pixbuf, state->pixbuf, 0, 0, state->width, state->height, -1 * state->viewbox.x0 * scale_x, -1 * state->viewbox.y0 * scale_y, scale_x, scale_y, GDK_INTERP_NEAREST);
+    }
+}
+
+void computeDiff(State *state, GdkPixbuf *standard, GdkPixbuf *provided, GdkPixbuf * result, float *percentage_diff)
+{
+    int width = gdk_pixbuf_get_width(result);
+    int height = gdk_pixbuf_get_height(result);
+    int stride = gdk_pixbuf_get_rowstride(result);
+    unsigned char* data_result = gdk_pixbuf_get_pixels(result);
+    unsigned char* data_standard = gdk_pixbuf_get_pixels(standard);
+    unsigned char* data_provided = gdk_pixbuf_get_pixels(provided);
+    int pixels_diff = 0;
+    int pixels_total = width * height;
+    for(int r = 0; r < height; r++){
+        for(int c = 0; c < width; c++){
+            /* clearing the result */
+            *(data_result + r*stride + c*4) = 255;
+            *(data_result + r*stride + c*4 + 1) = 255;
+            *(data_result + r*stride + c*4 + 2) = 255;
+            *(data_result + r*stride + c*4 + 3) = 0;
+            /* compare standard with provided putting the result in result */
+            float diff = sqrt(pow(*(data_standard + r*stride + c*4) - *(data_provided + r*stride + c*4), 2) +
+                              pow(*(data_standard + r*stride + c*4) - *(data_provided + r*stride + c*4), 2) +
+                              pow(*(data_standard + r*stride + c*4) - *(data_provided + r*stride + c*4), 2))/3.0;
+            diff = (diff / 255.0) * 100.0;
+            if (diff > 0){
+                pixels_diff++;
+                *(data_result + r*stride + c*4) = diff;
+                *(data_result + r*stride + c*4 + 1) = diff;
+                *(data_result + r*stride + c*4 + 2) = diff;
+                *(data_result + r*stride + c*4 + 3) = diff;
+            }
+        }
+    }
+    *percentage_diff = (((float)pixels_diff)/((float)pixels_total))*100.0;
+}
+
 void doTheDrawing(State *state)
 {
-    setTransform(state);
-    drawSVGDocument(state);
-    if (state->show_bbox || state->show_sub_bbox)
-        drawBoundingBoxes(state);
+    if (state->view == VIEW_FREE_HAND) {
+        setTransform(state);
+        drawSVGDocument(state);
+        if (state->show_bbox || state->show_sub_bbox)
+            drawBoundingBoxes(state);
+    } else {
+        drawFrozenImage(state);
+    }
     drawStateText(state);
 }
 
@@ -790,4 +933,21 @@ void toggleBoundingBox(State *state){
 
 void toggleSubBoundingBox(State *state){
     state->show_sub_bbox = !state->show_sub_bbox;
+}
+
+void toggleView(State *state)
+{
+    if (state->view == VIEW_FREE_HAND){
+        state->view = VIEW_CMP;
+        drawSVGDocumentLibrsvg(state);
+        drawSVGDocumentSNVCairo(state);
+        drawSVGDocumentSNVSkia(state);
+        drawSVGDocumentSNVCG(state);
+        resetTransform(state);
+        computeDiff(state, state->d_librsvg_pixbuf, state->d_cairo_pixbuf, state->d_cairo_diff_pixbuf, &state->d_cairo_percentage_diff);
+        computeDiff(state, state->d_librsvg_pixbuf, state->d_skia_pixbuf, state->d_skia_diff_pixbuf, &state->d_skia_percentage_diff);
+        computeDiff(state, state->d_librsvg_pixbuf, state->d_cg_pixbuf, state->d_cg_diff_pixbuf, &state->d_cg_percentage_diff);
+    } else {
+        state->view = VIEW_FREE_HAND;
+    }
 }

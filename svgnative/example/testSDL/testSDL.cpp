@@ -97,6 +97,16 @@ int main(int argc, char **argv)
                     toggleSubBoundingBox(state);
                     doTheDrawing(state);
                 }
+                else if(ke.keysym.scancode == 25)
+                {
+                    toggleView(state);
+                    doTheDrawing(state);
+                }
+                else if(ke.keysym.scancode == 7)
+                {
+                    toggleDiff(state);
+                    doTheDrawing(state);
+                }
                 else
                 {
                     printf("Key pressed: %d\n", ke.keysym.scancode);

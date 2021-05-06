@@ -120,3 +120,6 @@ void calculateBoundingBoxLibrsvg(State *state, SVGNative::Rect &bound, std::vect
 void calculateBoundingBoxSNVCairo(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds);
 void calculateBoundingBoxSNVSkia(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds);
 void calculateBoundingBoxSNVCG(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds);
+void toggleView(State *state);
+void drawFrozenImage(State *state);
+void toggleDiff(State *state);
