@@ -87,6 +87,16 @@ int main(int argc, char **argv)
                     loadCurrentSVG(state);
                     doTheDrawing(state);
                 }
+                else if(ke.keysym.scancode == 5)
+                {
+                    toggleBoundingBox(state);
+                    doTheDrawing(state);
+                }
+                else if(ke.keysym.scancode == 17)
+                {
+                    toggleSubBoundingBox(state);
+                    doTheDrawing(state);
+                }
                 else
                 {
                     printf("Key pressed: %d\n", ke.keysym.scancode);

@@ -64,6 +64,8 @@ typedef struct _State {
     cairo_surface_t *d_librsvg_surface;
     cairo_t *d_librsvg_cr;
     GdkPixbuf *d_librsvg_pixbuf;
+    SVGNative::Rect d_librsvg_bound;
+    std::vector<SVGNative::Rect> d_librsvg_bounds;
     View view = VIEW_FREE_HAND;
     Renderer renderer = RENDERER_LIBRSVG;
     bool show_bbox = false;
@@ -74,6 +76,10 @@ typedef struct _State {
     cairo_surface_t *d_cairo_surface;
     cairo_t *d_cairo_cr;
     GdkPixbuf *d_cairo_pixbuf;
+    SVGNative::Rect d_cairo_bound;
+    std::vector<SVGNative::Rect> d_cairo_bounds;
+    bool d_cairo_is_bbox_good = false;
+    float d_cairo_bbox_percentage_larger = 0;
 #endif
 #ifdef USE_SKIA
     SkImageInfo d_skia_image_info;
@@ -81,11 +87,19 @@ typedef struct _State {
     sk_sp<SkSurface> d_skia_surface;
     SkCanvas* d_skia_canvas;
     GdkPixbuf *d_skia_pixbuf;
+    SVGNative::Rect d_skia_bound;
+    std::vector<SVGNative::Rect> d_skia_bounds;
+    bool d_skia_is_bbox_good = false;
+    float d_skia_bbox_percentage_larger = 0;
 #endif
 #ifdef USE_CG
     CGContextRef d_cg_context;
     CGColorSpaceRef d_cg_color_space;
     GdkPixbuf *d_cg_pixbuf;
+    SVGNative::Rect d_cg_bound;
+    std::vector<SVGNative::Rect> d_cg_bounds;
+    bool d_cg_is_bbox_good = false;
+    float d_cg_bbox_percentage_larger = 0;
 #endif
 } _State;
 
@@ -217,6 +231,29 @@ void loadCurrentSVG(State *state)
             svg_doc += line;
         }
         state->svg_document = svg_doc;
+        calculateBoundingBoxLibrsvg(state, state->d_librsvg_bound, state->d_librsvg_bounds);
+        calculateBoundingBoxSNVCairo(state, state->d_cairo_bound, state->d_cairo_bounds);
+        calculateBoundingBoxSNVSkia(state, state->d_skia_bound, state->d_skia_bounds);
+        calculateBoundingBoxSNVCG(state, state->d_cg_bound, state->d_cg_bounds);
+
+        {
+            SVGNative::Rect bound = state->d_cairo_bound;
+            bound = SVGNative::Rect{bound.x - 1, bound.y - 1, bound.width + 1, bound.height + 1};
+            state->d_cairo_is_bbox_good = bound.contains(state->d_librsvg_bound);
+            state->d_cairo_bbox_percentage_larger = 100*(bound.Area() / state->d_librsvg_bound.Area()) - 100.0;
+        }
+        {
+            SVGNative::Rect bound = state->d_skia_bound;
+            bound = SVGNative::Rect{bound.x - 1, bound.y - 1, bound.width + 1, bound.height + 1};
+            state->d_skia_is_bbox_good = bound.contains(state->d_librsvg_bound);
+            state->d_skia_bbox_percentage_larger = 100*(bound.Area() / state->d_librsvg_bound.Area()) - 100.0;
+        }
+        {
+            SVGNative::Rect bound = state->d_cg_bound;
+            bound = SVGNative::Rect{bound.x - 1, bound.y - 1, bound.width + 1, bound.height + 1};
+            state->d_cg_is_bbox_good = bound.contains(state->d_librsvg_bound);
+            state->d_cg_bbox_percentage_larger = 100*(bound.Area() / state->d_librsvg_bound.Area()) - 100.0;
+        }
     }
 }
 
@@ -236,9 +273,9 @@ void prevSVG(State *state)
 
 void loadFiles(State *state)
 {
-    state->filenames.push_back("./files/paths-red.svg");
-    state->filenames.push_back("./files/paths-blue.svg");
-    state->filenames.push_back("./files/paths-green.svg");
+    state->filenames.push_back("./files/paths.svg");
+    state->filenames.push_back("./files/paths-clipping.svg");
+    state->filenames.push_back("./files/simple-stroke.svg");
 }
 
 void destroy(State *state)
@@ -435,6 +472,72 @@ void drawStateText(State *state)
     cairo_show_text(state->cr, characters);
     base_y += 20;
 
+    if (state->renderer == RENDERER_LIBRSVG)
+    {
+        sprintf(characters, "Renderer: Librsvg");
+    }
+    else if(state->renderer == RENDERER_SNV_CAIRO)
+    {
+        sprintf(characters, "Renderer: SNV (Cairo)");
+    }
+    else if(state->renderer == RENDERER_SNV_SKIA)
+    {
+        sprintf(characters, "Renderer: SNV (Skia)");
+    }
+    else if(state->renderer == RENDERER_SNV_CG)
+    {
+        sprintf(characters, "Renderer: SNV (CG)");
+    }
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+
+    if (state->show_bbox){
+        sprintf(characters, "Show Bounding Box: True");
+    } else {
+        sprintf(characters, "Show Bounding Box: False");
+    }
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+    if (state->show_sub_bbox){
+        sprintf(characters, "Show Sub Bounding Boxes: True");
+    } else {
+        sprintf(characters, "Show Sub Bounding Boxes: False");
+    }
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+    SVGNative::Rect bound = state->d_librsvg_bound;
+    sprintf(characters, "Librsvg Bounds: %.4f %.4f %.4f %.4f\n", bound.x, bound.y, bound.width, bound.height);
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+    bound = state->d_cairo_bound;
+    sprintf(characters, "Cairo Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
+            state->d_cairo_is_bbox_good ? "valid" : "invalid", state->d_cairo_bbox_percentage_larger);
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+    bound = state->d_skia_bound;
+    sprintf(characters, "Skia Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
+            state->d_skia_is_bbox_good ? "valid" : "invalid", state->d_skia_bbox_percentage_larger);
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
+    bound = state->d_cg_bound;
+    sprintf(characters, "CoreGraphics Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
+            state->d_cg_is_bbox_good ? "valid" : "invalid", state->d_cg_bbox_percentage_larger);
+    cairo_move_to(state->cr, base_x, base_y);
+    cairo_show_text(state->cr, characters);
+    base_y += 20;
+
     cairo_surface_flush(state->cairo_surface);
     SDL_UpdateWindowSurface(state->window);
     cairo_restore(state->cr);
@@ -577,10 +680,114 @@ void drawSVGDocument(State *state)
     }
 }
 
+void calculateBoundingBoxLibrsvg(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
+{
+    cairo_surface_t *recording_surface = cairo_recording_surface_create(CAIRO_CONTENT_COLOR, NULL);
+    cairo_t *cr = cairo_create(recording_surface);
+    GError *error = nullptr;
+    const char *data = state->svg_document.c_str();
+    long size_document = strlen(data);
+    RsvgHandle *handle = rsvg_handle_new_from_data((const unsigned char*)data, size_document, &error);
+    rsvg_handle_render_cairo(handle, cr);
+    g_object_unref(handle);
+    cairo_destroy(cr);
+    cairo_surface_flush(recording_surface);
+
+    double x0, y0, width, height;
+    cairo_recording_surface_ink_extents(recording_surface, &x0, &y0, &width, &height);
+    cairo_surface_destroy(recording_surface);
+
+    bound = SVGNative::Rect{(float)x0, (float)y0, (float)width, (float)height};
+}
+
+void calculateBoundingBoxSNVCairo(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
+{
+    auto renderer = std::make_shared<SVGNative::CairoSVGRenderer>();
+    std::string copy_doc = state->svg_document;
+    auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
+    renderer->SetCairo(state->d_cairo_cr);
+    bound = doc->Bounds();
+    bounds = doc->BoundsSub();
+}
+
+void calculateBoundingBoxSNVSkia(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
+{
+    auto renderer = std::make_shared<SVGNative::SkiaSVGRenderer>();
+    renderer->SetSkCanvas(state->d_skia_canvas);
+    std::string copy_doc = state->svg_document;
+    auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
+    bound = doc->Bounds();
+    bounds = doc->BoundsSub();
+}
+
+void calculateBoundingBoxSNVCG(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
+{
+    std::string copy_doc = state->svg_document;
+    std::shared_ptr<SVGNative::CGSVGRenderer> renderer = std::make_shared<SVGNative::CGSVGRenderer>(SVGNative::CGSVGRenderer());
+    renderer->SetGraphicsContext(state->d_cg_context);
+    auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
+
+    bound = doc->Bounds();
+    bounds = doc->BoundsSub();
+}
+
+void drawBoundingBoxes(State *state)
+{
+    SVGNative::Rect bound;
+    std::vector<SVGNative::Rect> bounds;
+    if (state->renderer == RENDERER_LIBRSVG)
+    {
+        bound = state->d_librsvg_bound;
+        bounds = state->d_librsvg_bounds;
+    }
+    else if(state->renderer == RENDERER_SNV_CAIRO)
+    {
+        bound = state->d_cairo_bound;
+        bounds = state->d_cairo_bounds;
+    }
+    else if(state->renderer == RENDERER_SNV_SKIA)
+    {
+        bound = state->d_skia_bound;
+        bounds = state->d_skia_bounds;
+    }
+    else if(state->renderer == RENDERER_SNV_CG)
+    {
+        bound = state->d_cg_bound;
+        bounds = state->d_cg_bounds;
+    }
+
+    if (state->show_sub_bbox){
+        for(int i = 0; i < bounds.size(); i++)
+        {
+            cairo_set_line_width(state->cr, 1.0);
+            cairo_set_source_rgb(state->cr, 0.0, 1.0, 0.0);
+            cairo_rectangle(state->cr, bounds[i].x, bounds[i].y, bounds[i].width, bounds[i].height);
+            cairo_stroke(state->cr);
+            cairo_surface_flush(state->cairo_surface);
+        }
+    }
+
+    cairo_set_line_width(state->cr, 1.0);
+    cairo_set_source_rgb(state->cr, 1.0, 0.0, 0.0);
+    cairo_rectangle(state->cr, bound.x, bound.y, bound.width, bound.height);
+    cairo_stroke(state->cr);
+    cairo_surface_flush(state->cairo_surface);
+    SDL_UpdateWindowSurface(state->window);
+}
+
 void doTheDrawing(State *state)
 {
     setTransform(state);
     drawSVGDocument(state);
+    if (state->show_bbox || state->show_sub_bbox)
+        drawBoundingBoxes(state);
     drawStateText(state);
+}
 
+void toggleBoundingBox(State *state){
+    state->show_bbox = !state->show_bbox;
+}
+
+void toggleSubBoundingBox(State *state){
+    state->show_sub_bbox = !state->show_sub_bbox;
 }

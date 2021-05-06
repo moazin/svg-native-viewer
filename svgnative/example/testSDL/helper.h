@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <cairo.h>
+#include <svgnative/SVGDocument.h>
 #include <string>
 
 typedef struct _State State;
@@ -42,6 +43,16 @@ void destroy(State *state);
 void clearCanvas(State *state);
 
 /**
+ * Invert the bounding box display flag;
+ */
+void toggleBoundingBox(State *state);
+
+/**
+ * Invert the sub bounding box display flag;
+ */
+void toggleSubBoundingBox(State *state);
+
+/**
  * Draw a rectangle with the given parameters. Note that the drawing will take place
  * with any transforms taken into account. Which means, the drawing will be zoomed in
  * if you've zoomed in the canvas.
@@ -52,6 +63,11 @@ void drawRectangle(State *state, float x0, float y0, float x1, float y1, double 
  * Draw the SVG document in the current renderer given the current transform.
  */
 void drawSVGDocument(State *state);
+
+/**
+ * Draw the bounding boxes.
+ */
+void drawBoundingBoxes(State *state);
 
 /**
  * Clear the port specific rendering.
@@ -99,3 +115,8 @@ void setTransform(State *state);
  */
 void moveTransform(State *state, int x, int y);
 void displayBuffer(State *state, int index);
+
+void calculateBoundingBoxLibrsvg(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds);
+void calculateBoundingBoxSNVCairo(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds);
+void calculateBoundingBoxSNVSkia(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds);
+void calculateBoundingBoxSNVCG(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds);
