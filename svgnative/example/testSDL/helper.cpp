@@ -889,7 +889,7 @@ void computeDiff(State *state, GdkPixbuf *standard, GdkPixbuf *provided, GdkPixb
     unsigned char* data_standard = gdk_pixbuf_get_pixels(standard);
     unsigned char* data_provided = gdk_pixbuf_get_pixels(provided);
     int pixels_diff = 0;
-    int pixels_total = width * height;
+    int pixels_total = 0;
     for(int r = 0; r < height; r++){
         for(int c = 0; c < width; c++){
             /* clearing the result */
@@ -897,6 +897,10 @@ void computeDiff(State *state, GdkPixbuf *standard, GdkPixbuf *provided, GdkPixb
             *(data_result + r*stride + c*4 + 1) = 255;
             *(data_result + r*stride + c*4 + 2) = 255;
             *(data_result + r*stride + c*4 + 3) = 0;
+
+            if (*(data_standard + r*stride + c*4) != 255 || *(data_standard + r*stride + c*4 + 1) != 255 || *(data_standard + r*stride + c*4 + 2) != 255){
+                pixels_total += 1;
+            }
             /* compare standard with provided putting the result in result */
             float diff =     (abs(*(data_standard + r*stride + c*4) - *(data_provided + r*stride + c*4)) +
                               abs(*(data_standard + r*stride + c*4 + 1) - *(data_provided + r*stride + c*4 + 1)) +
