@@ -34,6 +34,7 @@ static const std::string gSVGString = "<svg viewBox=\"0 0 200 200\"><circle cx=\
 static void
 MainWinPaintToCanvas(HDC hdc)
 {
+    /*
     Graphics graphics(hdc);
 
     auto renderer = std::shared_ptr<GDIPlusSVGRenderer>(new GDIPlusSVGRenderer);
@@ -41,6 +42,34 @@ MainWinPaintToCanvas(HDC hdc)
 
     auto svgDocument = SVGDocument::CreateSVGDocument(gSVGString.c_str(), renderer);
     svgDocument->Render();
+    */
+
+    Bitmap* bitmap = new Bitmap(1000, 1000, PixelFormat32bppARGB);
+    Graphics *graphics = Graphics::FromImage(bitmap);
+
+    auto renderer = std::shared_ptr<GDIPlusSVGRenderer>(new GDIPlusSVGRenderer);
+    renderer->SetGraphicsContext(graphics);
+
+    auto svgDocument = SVGDocument::CreateSVGDocument(gSVGString.c_str(), renderer);
+    svgDocument->Render();
+
+    HDC hdcMem = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap;
+    bitmap->GetHBITMAP(Gdiplus::Color(255, 255, 255), &hBitmap);
+    SelectObject(hdcMem, hBitmap);
+    BitBlt(hdc, 0, 0, 1000, 1000, hdcMem, 0, 0, SRCCOPY);
+
+    /*
+    for (int i = 0; i < 1000; i++) {
+        for (int j = 0; j < 1000; j++) {
+            Gdiplus::Color color;
+            bitmap->GetPixel(i, j, &color);
+            SetPixel(hdc, i, j, color.ToCOLORREF());
+        }
+    }
+    */
+
+
 }
 
 /* Main window procedure */
