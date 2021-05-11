@@ -68,6 +68,7 @@ typedef struct _State {
     GdkPixbuf *d_librsvg_pixbuf;
     SVGNative::Rect d_librsvg_bound;
     std::vector<SVGNative::Rect> d_librsvg_bounds;
+    long d_librsvg_time = 0;
     View view = VIEW_FREE_HAND;
     Renderer renderer = RENDERER_LIBRSVG;
     bool show_bbox = false;
@@ -85,6 +86,7 @@ typedef struct _State {
     float d_cairo_bbox_percentage_larger = 0;
     GdkPixbuf *d_cairo_diff_pixbuf;
     float d_cairo_percentage_diff = 0;
+    long d_cairo_time = 0;
 #endif
 #ifdef USE_SKIA
     SkImageInfo d_skia_image_info;
@@ -98,6 +100,7 @@ typedef struct _State {
     float d_skia_bbox_percentage_larger = 0;
     GdkPixbuf *d_skia_diff_pixbuf;
     float d_skia_percentage_diff = 0;
+    long d_skia_time = 0;
 #endif
 #ifdef USE_CG
     CGContextRef d_cg_context;
@@ -109,6 +112,7 @@ typedef struct _State {
     float d_cg_bbox_percentage_larger = 0;
     GdkPixbuf *d_cg_diff_pixbuf;
     float d_cg_percentage_diff = 0;
+    long d_cg_time = 0;
 #endif
 } _State;
 
@@ -542,29 +546,29 @@ void drawStateText(State *state)
 
 
     SVGNative::Rect bound = state->d_librsvg_bound;
-    sprintf(characters, "Librsvg Bounds: %.4f %.4f %.4f %.4f\n", bound.x, bound.y, bound.width, bound.height);
+    sprintf(characters, "Librsvg Bounds: %.4f %.4f %.4f %.4f %d\n", bound.x, bound.y, bound.width, bound.height, state->d_librsvg_time);
     cairo_move_to(state->cr, base_x, base_y);
     cairo_show_text(state->cr, characters);
     base_y += 20;
 
     bound = state->d_cairo_bound;
-    sprintf(characters, "Cairo Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
-            state->d_cairo_is_bbox_good ? "valid" : "invalid", state->d_cairo_bbox_percentage_larger);
+    sprintf(characters, "Cairo Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%) %d\n", bound.x, bound.y, bound.width, bound.height,
+            state->d_cairo_is_bbox_good ? "valid" : "invalid", state->d_cairo_bbox_percentage_larger, state->d_cairo_time);
     cairo_move_to(state->cr, base_x, base_y);
     cairo_show_text(state->cr, characters);
     base_y += 20;
 #ifdef USE_SKIA
     bound = state->d_skia_bound;
-    sprintf(characters, "Skia Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
-            state->d_skia_is_bbox_good ? "valid" : "invalid", state->d_skia_bbox_percentage_larger);
+    sprintf(characters, "Skia Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%) %d\n", bound.x, bound.y, bound.width, bound.height,
+            state->d_skia_is_bbox_good ? "valid" : "invalid", state->d_skia_bbox_percentage_larger, state->d_skia_time);
     cairo_move_to(state->cr, base_x, base_y);
     cairo_show_text(state->cr, characters);
     base_y += 20;
 #endif
 #ifdef USE_CG
     bound = state->d_cg_bound;
-    sprintf(characters, "CoreGraphics Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
-            state->d_cg_is_bbox_good ? "valid" : "invalid", state->d_cg_bbox_percentage_larger);
+    sprintf(characters, "CoreGraphics Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%) %d\n", bound.x, bound.y, bound.width, bound.height,
+            state->d_cg_is_bbox_good ? "valid" : "invalid", state->d_cg_bbox_percentage_larger, state->d_cg_time);
     cairo_move_to(state->cr, base_x, base_y);
     cairo_show_text(state->cr, characters);
     base_y += 20;
@@ -752,7 +756,7 @@ void drawSVGDocumentSNVCG(State *state)
     renderer->SetGraphicsContext(state->d_cg_context);
     auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
     doc->Render();
-
+  
     /*
     CGContextSaveGState(state->d_cg_context);
 
@@ -827,6 +831,7 @@ void drawSVGDocument(State *state)
 
 void calculateBoundingBoxLibrsvg(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
 {
+    auto start = std::chrono::steady_clock::now();
     cairo_surface_t *recording_surface = cairo_recording_surface_create(CAIRO_CONTENT_COLOR, NULL);
     cairo_t *cr = cairo_create(recording_surface);
     GError *error = nullptr;
@@ -843,40 +848,50 @@ void calculateBoundingBoxLibrsvg(State *state, SVGNative::Rect &bound, std::vect
     cairo_surface_destroy(recording_surface);
 
     bound = SVGNative::Rect{(float)x0, (float)y0, (float)width, (float)height};
+    auto end = std::chrono::steady_clock::now();
+    state->d_librsvg_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
 }
 
 void calculateBoundingBoxSNVCairo(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
 {
+    auto start = std::chrono::steady_clock::now();
     auto renderer = std::make_shared<SVGNative::CairoSVGRenderer>();
     std::string copy_doc = state->svg_document;
     auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
     renderer->SetCairo(state->d_cairo_cr);
     bound = doc->Bounds();
     bounds = doc->BoundsSub();
+    auto end = std::chrono::steady_clock::now();
+    state->d_cairo_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
 }
 
 #ifdef USE_SKIA
 void calculateBoundingBoxSNVSkia(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
 {
+    auto start = std::chrono::steady_clock::now();
     auto renderer = std::make_shared<SVGNative::SkiaSVGRenderer>();
     renderer->SetSkCanvas(state->d_skia_canvas);
     std::string copy_doc = state->svg_document;
     auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
     bound = doc->Bounds();
     bounds = doc->BoundsSub();
+    auto end = std::chrono::steady_clock::now();
+    state->d_skia_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
 }
 #endif
 
 #ifdef USE_CG
 void calculateBoundingBoxSNVCG(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
 {
+    auto start = std::chrono::steady_clock::now();
     std::string copy_doc = state->svg_document;
     std::shared_ptr<SVGNative::CGSVGRenderer> renderer = std::make_shared<SVGNative::CGSVGRenderer>(SVGNative::CGSVGRenderer());
     renderer->SetGraphicsContext(state->d_cg_context);
     auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
-
     bound = doc->Bounds();
     bounds = doc->BoundsSub();
+    auto end = std::chrono::steady_clock::now();
+    state->d_cg_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
 }
 #endif
 
