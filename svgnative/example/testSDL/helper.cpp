@@ -297,7 +297,7 @@ void prevSVG(State *state)
 
 void loadFiles(State *state)
 {
-    state->filenames.push_back("./files/clipping-problem.svg");
+    state->filenames.push_back("./files/paths.svg");
     state->filenames.push_back("./files/paths-clipping.svg");
     state->filenames.push_back("./files/simple-stroke.svg");
 }
