@@ -245,8 +245,12 @@ void loadCurrentSVG(State *state)
         state->svg_document = svg_doc;
         calculateBoundingBoxLibrsvg(state, state->d_librsvg_bound, state->d_librsvg_bounds);
         calculateBoundingBoxSNVCairo(state, state->d_cairo_bound, state->d_cairo_bounds);
+#ifdef USE_SKIA
         calculateBoundingBoxSNVSkia(state, state->d_skia_bound, state->d_skia_bounds);
+#endif
+#ifdef USE_CG
         calculateBoundingBoxSNVCG(state, state->d_cg_bound, state->d_cg_bounds);
+#endif
 
         {
             SVGNative::Rect bound = state->d_cairo_bound;
@@ -255,16 +259,20 @@ void loadCurrentSVG(State *state)
             state->d_cairo_bbox_percentage_larger = 100*(bound.Area() / state->d_librsvg_bound.Area()) - 100.0;
         }
         {
+#ifdef USE_SKIA
             SVGNative::Rect bound = state->d_skia_bound;
             bound = SVGNative::Rect{bound.x - 1, bound.y - 1, bound.width + 1, bound.height + 1};
             state->d_skia_is_bbox_good = bound.contains(state->d_librsvg_bound);
             state->d_skia_bbox_percentage_larger = 100*(bound.Area() / state->d_librsvg_bound.Area()) - 100.0;
+#endif
         }
         {
+#ifdef USE_CG
             SVGNative::Rect bound = state->d_cg_bound;
             bound = SVGNative::Rect{bound.x - 1, bound.y - 1, bound.width + 1, bound.height + 1};
             state->d_cg_is_bbox_good = bound.contains(state->d_librsvg_bound);
             state->d_cg_bbox_percentage_larger = 100*(bound.Area() / state->d_librsvg_bound.Area()) - 100.0;
+#endif
         }
     }
 }
@@ -545,21 +553,22 @@ void drawStateText(State *state)
     cairo_move_to(state->cr, base_x, base_y);
     cairo_show_text(state->cr, characters);
     base_y += 20;
-
+#ifdef USE_SKIA
     bound = state->d_skia_bound;
     sprintf(characters, "Skia Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
             state->d_skia_is_bbox_good ? "valid" : "invalid", state->d_skia_bbox_percentage_larger);
     cairo_move_to(state->cr, base_x, base_y);
     cairo_show_text(state->cr, characters);
     base_y += 20;
-
+#endif
+#ifdef USE_CG
     bound = state->d_cg_bound;
     sprintf(characters, "CoreGraphics Bounds: %.4f %.4f %.4f %.4f (%s)(%.2f%%)\n", bound.x, bound.y, bound.width, bound.height,
             state->d_cg_is_bbox_good ? "valid" : "invalid", state->d_cg_bbox_percentage_larger);
     cairo_move_to(state->cr, base_x, base_y);
     cairo_show_text(state->cr, characters);
     base_y += 20;
-
+#endif
     if (state->view == VIEW_FREE_HAND){
         sprintf(characters, "View: Freehand\n");
     } else {
@@ -574,14 +583,18 @@ void drawStateText(State *state)
         cairo_move_to(state->cr, base_x, base_y);
         cairo_show_text(state->cr, characters);
         base_y += 20;
+#ifdef USE_SKIA
         sprintf(characters, "SNV (Skia) diff Librsvg: %.2f %%", state->d_skia_percentage_diff);
         cairo_move_to(state->cr, base_x, base_y);
         cairo_show_text(state->cr, characters);
         base_y += 20;
+#endif
+#ifdef USE_CG
         sprintf(characters, "SNV (CG) diff Librsvg: %.2f %%", state->d_cg_percentage_diff);
         cairo_move_to(state->cr, base_x, base_y);
         cairo_show_text(state->cr, characters);
         base_y += 20;
+#endif
     }
 
     cairo_surface_flush(state->cairo_surface);
@@ -596,9 +609,13 @@ void displayBuffer(State *state, int index)
     } else if(index == 1){
         gdk_pixbuf_scale(state->d_cairo_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
     } else if (index == 2){
+#ifdef USE_SKIA
         gdk_pixbuf_scale(state->d_skia_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
+#endif
     } else if (index == 3){
+#ifdef USE_CG
         gdk_pixbuf_scale(state->d_cg_pixbuf, state->pixbuf, 0, 0, state->width, state->height, 0, 0, 1, 1, GDK_INTERP_NEAREST);
+#endif
     }
 }
 
@@ -622,6 +639,7 @@ void clearSVGDocumentCairo(State *state){
     cairo_surface_flush(state->d_cairo_surface);
 }
 
+#ifdef USE_SKIA
 void clearSVGDocumentSkia(State *state)
 {
     state->d_skia_canvas->save();
@@ -638,7 +656,8 @@ void clearSVGDocumentSkia(State *state)
     state->d_skia_canvas->drawPath(path, paint);
     state->d_skia_canvas->restore();
 }
-
+#endif
+#ifdef USE_CG
 void clearSVGDocumentCG(State *state)
 {
     CGContextSaveGState(state->d_cg_context);
@@ -650,6 +669,7 @@ void clearSVGDocumentCG(State *state)
     CGContextFillPath(state->d_cg_context);
     CGContextRestoreGState(state->d_cg_context);
 }
+#endif
 
 void clearSVGDocument(State *state)
 {
@@ -663,11 +683,15 @@ void clearSVGDocument(State *state)
     }
     else if(state->renderer == RENDERER_SNV_SKIA)
     {
+#ifdef USE_SKIA
         clearSVGDocumentSkia(state);
+#endif
     }
     else if(state->renderer == RENDERER_SNV_CG)
     {
+#ifdef USE_CG
         clearSVGDocumentCG(state);
+#endif
     }
 }
 
@@ -706,6 +730,7 @@ void drawSVGDocumentSNVCairo(State *state)
     cairo_surface_flush(state->d_cairo_surface);
 }
 
+#ifdef USE_SKIA
 void drawSVGDocumentSNVSkia(State *state)
 {
     clearSVGDocumentSkia(state);
@@ -716,7 +741,9 @@ void drawSVGDocumentSNVSkia(State *state)
     doc->Render();
     state->d_skia_surface->flush();
 }
+#endif
 
+#ifdef USE_CG
 void drawSVGDocumentSNVCG(State *state)
 {
     clearSVGDocumentCG(state);
@@ -768,6 +795,7 @@ void drawSVGDocumentSNVCG(State *state)
         }
     }
 }
+#endif
 
 void drawSVGDocument(State *state)
 {
@@ -783,13 +811,17 @@ void drawSVGDocument(State *state)
     }
     else if(state->renderer == RENDERER_SNV_SKIA)
     {
+#ifdef USE_SKIA
         drawSVGDocumentSNVSkia(state);
         displayBuffer(state, 2);
+#endif
     }
     else if(state->renderer == RENDERER_SNV_CG)
     {
+#ifdef USE_CG
         drawSVGDocumentSNVCG(state);
         displayBuffer(state, 3);
+#endif
     }
 }
 
@@ -823,6 +855,7 @@ void calculateBoundingBoxSNVCairo(State *state, SVGNative::Rect &bound, std::vec
     bounds = doc->BoundsSub();
 }
 
+#ifdef USE_SKIA
 void calculateBoundingBoxSNVSkia(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
 {
     auto renderer = std::make_shared<SVGNative::SkiaSVGRenderer>();
@@ -832,7 +865,9 @@ void calculateBoundingBoxSNVSkia(State *state, SVGNative::Rect &bound, std::vect
     bound = doc->Bounds();
     bounds = doc->BoundsSub();
 }
+#endif
 
+#ifdef USE_CG
 void calculateBoundingBoxSNVCG(State *state, SVGNative::Rect &bound, std::vector<SVGNative::Rect> &bounds)
 {
     std::string copy_doc = state->svg_document;
@@ -843,6 +878,7 @@ void calculateBoundingBoxSNVCG(State *state, SVGNative::Rect &bound, std::vector
     bound = doc->Bounds();
     bounds = doc->BoundsSub();
 }
+#endif
 
 void drawBoundingBoxes(State *state)
 {
@@ -860,13 +896,17 @@ void drawBoundingBoxes(State *state)
     }
     else if(state->renderer == RENDERER_SNV_SKIA)
     {
+#ifdef USE_SKIA
         bound = state->d_skia_bound;
         bounds = state->d_skia_bounds;
+#endif
     }
     else if(state->renderer == RENDERER_SNV_CG)
     {
+#ifdef USE_CG
         bound = state->d_cg_bound;
         bounds = state->d_cg_bounds;
+#endif
     }
 
     if (state->show_sub_bbox){
@@ -903,9 +943,13 @@ void drawFrozenImage(State *state)
     } else if(state->renderer == RENDERER_SNV_CAIRO){
         gdk_pixbuf_scale(state->show_diff ? state->d_cairo_diff_pixbuf : state->d_cairo_pixbuf, state->pixbuf, 0, 0, state->width, state->height, -1 * state->viewbox.x0 * scale_x, -1 * state->viewbox.y0 * scale_y, scale_x, scale_y, GDK_INTERP_NEAREST);
     } else if (state->renderer == RENDERER_SNV_SKIA){
+#ifdef USE_SKIA
         gdk_pixbuf_scale(state->show_diff ? state->d_skia_diff_pixbuf : state->d_skia_pixbuf, state->pixbuf, 0, 0, state->width, state->height, -1 * state->viewbox.x0 * scale_x, -1 * state->viewbox.y0 * scale_y, scale_x, scale_y, GDK_INTERP_NEAREST);
+#endif
     } else if (state->renderer == RENDERER_SNV_CG){
+#ifdef USE_CG
         gdk_pixbuf_scale(state->show_diff ? state->d_cg_diff_pixbuf : state->d_cg_pixbuf, state->pixbuf, 0, 0, state->width, state->height, -1 * state->viewbox.x0 * scale_x, -1 * state->viewbox.y0 * scale_y, scale_x, scale_y, GDK_INTERP_NEAREST);
+#endif
     }
 }
 
@@ -975,12 +1019,20 @@ void toggleView(State *state)
         state->view = VIEW_CMP;
         drawSVGDocumentLibrsvg(state);
         drawSVGDocumentSNVCairo(state);
+#ifdef USE_SKIA
         drawSVGDocumentSNVSkia(state);
+#endif
+#ifdef USE_CG
         drawSVGDocumentSNVCG(state);
+#endif
         resetTransform(state);
         computeDiff(state, state->d_librsvg_pixbuf, state->d_cairo_pixbuf, state->d_cairo_diff_pixbuf, &state->d_cairo_percentage_diff);
+#ifdef USE_SKIA
         computeDiff(state, state->d_librsvg_pixbuf, state->d_skia_pixbuf, state->d_skia_diff_pixbuf, &state->d_skia_percentage_diff);
+#endif
+#ifdef USE_CG
         computeDiff(state, state->d_librsvg_pixbuf, state->d_cg_pixbuf, state->d_cg_diff_pixbuf, &state->d_cg_percentage_diff);
+#endif
     } else {
         state->view = VIEW_FREE_HAND;
     }

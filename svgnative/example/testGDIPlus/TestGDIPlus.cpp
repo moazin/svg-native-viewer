@@ -52,7 +52,7 @@ MainWinPaintToCanvas(HDC hdc)
     graphics.TranslateTransform(000, 0, Gdiplus::MatrixOrderPrepend);
 
     svgDocument->Render();
-    std::vector<SVGNative::Rect> bounds = svgDocument->Bounds();
+    std::vector<SVGNative::Rect> bounds = svgDocument->BoundsSub();
 
     graphics.ResetTransform();
 
