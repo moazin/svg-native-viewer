@@ -285,7 +285,7 @@ void prevSVG(State *state)
 
 void loadFiles(State *state)
 {
-    state->filenames.push_back("./files/paths.svg");
+    state->filenames.push_back("./files/clipping-problem.svg");
     state->filenames.push_back("./files/paths-clipping.svg");
     state->filenames.push_back("./files/simple-stroke.svg");
 }
@@ -725,6 +725,35 @@ void drawSVGDocumentSNVCG(State *state)
     renderer->SetGraphicsContext(state->d_cg_context);
     auto doc = std::unique_ptr<SVGNative::SVGDocument>(SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), renderer));
     doc->Render();
+
+    /*
+    CGContextSaveGState(state->d_cg_context);
+
+    CGContextTranslateCTM(state->d_cg_context, 500, 500);
+    CGContextRotateCTM(state->d_cg_context, 45 * (M_PI/180.0));
+    CGContextTranslateCTM(state->d_cg_context, -500, -500);
+
+    CGContextSetAlpha(state->d_cg_context, 1.0);
+    CGContextBeginTransparencyLayer(state->d_cg_context, 0);
+
+    CGContextSetRGBFillColor(state->d_cg_context, 1.0, 0.0, 0.0, 1.0);
+    CGContextBeginPath(state->d_cg_context);
+    CGContextAddRect(state->d_cg_context, CGRectMake(400, 400, 200, 200));
+    CGContextFillPath(state->d_cg_context);
+
+
+    CGContextSetRGBStrokeColor(state->d_cg_context, 0.0, 1.0, 0.0, 1.0);
+    CGContextSetLineWidth(state->d_cg_context, 50);
+    CGContextSetMiterLimit(state->d_cg_context, 4);
+    CGContextBeginPath(state->d_cg_context);
+    CGContextAddRect(state->d_cg_context, CGRectMake(400, 400, 200, 200));
+    CGContextStrokePath(state->d_cg_context);
+
+
+    CGContextEndTransparencyLayer(state->d_cg_context);
+    CGContextRestoreGState(state->d_cg_context);
+    */
+
     int width = CGBitmapContextGetWidth(state->d_cg_context);
     int height = CGBitmapContextGetHeight(state->d_cg_context);
     unsigned char *data = (unsigned char*)CGBitmapContextGetData(state->d_cg_context);
