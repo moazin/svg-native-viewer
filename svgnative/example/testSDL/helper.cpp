@@ -1,6 +1,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <chrono>
 #include <cmath>
 
 #include "helper.h"
@@ -125,7 +126,6 @@ int initialize(State **_state, int width, int height) {
 
     loadFiles(state);
 
-    width += 500;
 #ifdef USE_CAIRO
     state->renderers_supported.push_back(SVG_RENDERER_CAIRO);
 #endif
@@ -147,8 +147,10 @@ int initialize(State **_state, int width, int height) {
 
     state->viewbox.x0 = 0;
     state->viewbox.y0 = 0;
-    state->viewbox.x1 = 999;
-    state->viewbox.y1 = 999;
+    state->viewbox.x1 = width - 1;
+    state->viewbox.y1 = height - 1;
+
+    width += 500;
 
     state->window = SDL_CreateWindow("SNV Demo Tool",
                                      0,
@@ -173,7 +175,7 @@ int initialize(State **_state, int width, int height) {
                                              GDK_COLORSPACE_RGB, true, 8,
                                              state->sdl_surface->w, state->sdl_surface->h,
                                              state->sdl_surface->pitch, NULL, NULL);
-    cairo_rectangle(state->cr, 0, 0, 1000, 1000);
+    cairo_rectangle(state->cr, 0, 0, width, height);
     cairo_clip(state->cr);
 
     {
@@ -297,9 +299,7 @@ void prevSVG(State *state)
 
 void loadFiles(State *state)
 {
-    state->filenames.push_back("./files/paths.svg");
-    state->filenames.push_back("./files/paths-clipping.svg");
-    state->filenames.push_back("./files/simple-stroke.svg");
+    state->filenames.push_back("./files/dataset/shapes-gradients.svg");
 }
 
 void destroy(State *state)

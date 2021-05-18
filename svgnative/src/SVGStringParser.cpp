@@ -712,7 +712,7 @@ void ParsePathString(const std::string& pathString, Path& p)
                 currentY += newY;
             }
 
-            SVG_ASSERT(angle == 0);
+            //SVG_ASSERT(angle == 0);
 
             ArcToCurve(p, startX, startY, rx, ry, angle, flagLarge, flagSweep, currentX, currentY, prevControlX, prevControlY);
 

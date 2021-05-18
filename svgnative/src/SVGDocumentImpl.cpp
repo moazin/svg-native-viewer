@@ -835,6 +835,7 @@ void SVGDocumentImpl::ParseColorStops(XMLNode* node, GradientImpl& gradient)
     std::vector<ColorStopImpl> colorStops;
     for (auto child = node->GetFirstNode(); child != nullptr; child = child->GetNextSibling())
     {
+        printf("%s\n", child->GetName());
         if (!strcmp(child->GetName(), kStopElem))
             lastOffset = ParseColorStop(child.get(), colorStops, lastOffset);
     }

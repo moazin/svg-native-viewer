@@ -97,7 +97,7 @@ void ArcToCurve(SVGNative::Path& path, float startX, float startY, float radiusX
 {
     // https://www.w3.org/TR/SVG11/implnote.html#ArcImplementationNotes
 
-    SVG_ASSERT(angle == 0); // untested
+    //SVG_ASSERT(angle == 0); // untested
 
     if (radiusX == 0 || radiusY == 0)
     {
