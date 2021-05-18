@@ -185,6 +185,9 @@ public:
      */
     void Render(const char* id, const ColorMap& colorMap, float width, float height);
 
+    bool HasViewBox();
+    Rect ViewBox();
+
 private:
     SVGDocument();
 

@@ -197,6 +197,7 @@ public:
     void Render(const char* id, const ColorMap& colorMap, float width, float height);
 
     std::array<float, 4> mViewBox;
+    bool hasViewBox = false;
     std::shared_ptr<SVGRenderer> mRenderer;
 
 private:

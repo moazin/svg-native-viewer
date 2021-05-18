@@ -82,7 +82,24 @@ snv_status_t snv_transform_reset(snv_t *context)
   context->mTransform->Set(1, 0, 0, 1, 0, 0);
 }
 
-SVG_IMP_EXP snv_status_t snv_render(snv_t *context, unsigned char *data, int width, int height, int stride)
+snv_status_t snv_get_viewbox(snv_t *context, bool *hasViewbox, snv_rect *viewbox)
+{
+  if (context->mDocument->HasViewBox())
+  {
+    *hasViewbox = true;
+    SVGNative::Rect viewBox = context->mDocument->ViewBox();
+    viewbox->x0 = viewBox.x;
+    viewbox->y0 = viewBox.y;
+    viewbox->x1 = viewBox.x + viewBox.width - 1;
+    viewbox->y1 = viewBox.y + viewBox.height - 1;
+  }
+  else
+  {
+    *hasViewbox = false;
+  }
+}
+
+snv_status_t snv_render(snv_t *context, unsigned char *data, int width, int height, int stride)
 {
   auto skia_image_info = SkImageInfo::Make(width, height, kBGRA_8888_SkColorType, kPremul_SkAlphaType);
   auto skia_surface = SkSurface::MakeRasterDirect(skia_image_info, data, stride);
@@ -92,4 +109,9 @@ SVG_IMP_EXP snv_status_t snv_render(snv_t *context, unsigned char *data, int wid
   auto renderer = std::dynamic_pointer_cast<SVGNative::SkiaSVGRenderer>(context->mRenderer);
   renderer->SetSkCanvas(skia_canvas);
   context->mDocument->Render();
+}
+
+void snv_destroy(snv_t *context)
+{
+  delete context;
 }

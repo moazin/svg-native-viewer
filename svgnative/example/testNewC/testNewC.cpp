@@ -22,6 +22,11 @@ int main(int argc, char **argv)
 
     snv_t *context;
     snv_create(svgInput.c_str(), &context);
+    snv_rect viewBox;
+    bool hasViewBox;
+    snv_get_viewbox(context, &hasViewBox, &viewBox);
+    if (hasViewBox)
+      printf("%f %f %f %f\n", viewBox.x0, viewBox.y0, viewBox.x1, viewBox.y1);
     snv_rect bbox;
     snv_get_bbox(context, &bbox);
     int width = ceil(bbox.x1) - floor(bbox.x0) + 1;
@@ -66,5 +71,5 @@ int main(int argc, char **argv)
             }
         }
     }
-
+  snv_destroy(context);
 }

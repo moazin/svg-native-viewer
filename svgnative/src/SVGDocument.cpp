@@ -167,6 +167,17 @@ SVGRenderer* SVGDocument::Renderer() const
     return mDocument->mRenderer.get();
 }
 
+bool SVGDocument::HasViewBox()
+{
+  return mDocument->hasViewBox;
+}
+
+Rect SVGDocument::ViewBox()
+{
+  auto viewBox = mDocument->mViewBox;
+  return Rect{viewBox[0], viewBox[1], viewBox[2], viewBox[3]};
+}
+
 #ifdef STYLE_SUPPORT
 void SVGDocument::AddCustomCSS(const StyleSheet::CssDocument* cssDocument)
 {
