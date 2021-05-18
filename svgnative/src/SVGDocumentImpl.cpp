@@ -948,7 +948,9 @@ std::vector<Rect> SVGDocumentImpl::Bounds(std::shared_ptr<Transform> transform)
     ExtractBounds(*mGroup);
     mRenderer->Restore();
     mRenderer->Restore();
-    return mBounds;
+    std::vector<Rect> bounds = mBounds;
+    mBounds.clear();
+    return bounds;
 }
 
 void SVGDocumentImpl::Render(const ColorMap& colorMap, float width, float height)

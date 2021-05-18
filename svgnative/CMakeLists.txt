@@ -205,6 +205,7 @@ if (USE_CAIRO_EXAMPLE)
 endif()
 if (TESTING)
 	add_subdirectory(example/testSDL)
+	add_subdirectory(example/testNewC)
 endif()
 
 ##############################
@@ -213,6 +214,7 @@ endif()
 file(GLOB gl_public
     include/SVGDocument.h
     include/SVGNativeCWrapper.h
+		include/SNVCWrapper.h
     include/SVGRenderer.h
 )
 file(GLOB gl_source
@@ -221,6 +223,7 @@ file(GLOB gl_source
     src/SVGDocumentImpl.cpp
     src/SVGDocument.cpp
     src/SVGNativeCWrapper.cpp
+		src/SNVCWrapper.cpp
     src/SVGParserArcToCurve.cpp
     src/SVGStringParser.h
     src/SVGStringParser.cpp

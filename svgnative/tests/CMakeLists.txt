@@ -8,6 +8,11 @@ target_link_libraries(runIntervalTest SVGNativeViewerLib)
 target_link_libraries(runIntervalTest gtest_main)
 add_test(NAME interval_unit_test COMMAND runIntervalTest)
 
+add_executable(testNewCTest test-new-c.cpp)
+target_link_libraries(testNewCTest SVGNativeViewerLib)
+target_link_libraries(testNewCTest gtest_main)
+add_test(NAME new_c_unit_test COMMAND testNewCTest)
+
 pkg_check_modules(LIBRSVG REQUIRED librsvg-2.0)
 add_executable(runBboxTest test-bounds.cpp)
 target_link_libraries(runBboxTest SVGNativeViewerLib)
