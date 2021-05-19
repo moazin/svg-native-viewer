@@ -47,7 +47,8 @@ snv_status_t snv_create(const char* document_string, snv_t **context_)
   auto renderer = std::make_shared<SVGNative::SkiaSVGRenderer>();
   context->mRenderer = renderer;
   context->mRendererType = SNV_RENDERER_SKIA;
-  context->mDocument = SVGNative::SVGDocument::CreateSVGDocument(document_string, context->mRenderer);
+  std::string copy_doc(document_string);
+  context->mDocument = SVGNative::SVGDocument::CreateSVGDocument(copy_doc.c_str(), context->mRenderer);
   if (context->mDocument == nullptr)
     return SNV_INVALID_DOCUMENT;
   context->mTransform = context->mRenderer->CreateTransform(1, 0, 0, 1, 0, 0);
@@ -82,11 +83,11 @@ snv_status_t snv_transform_reset(snv_t *context)
   context->mTransform->Set(1, 0, 0, 1, 0, 0);
 }
 
-snv_status_t snv_get_viewbox(snv_t *context, bool *hasViewbox, snv_rect *viewbox)
+snv_status_t snv_get_viewbox(snv_t *context, int *hasViewbox, snv_rect *viewbox)
 {
   if (context->mDocument->HasViewBox())
   {
-    *hasViewbox = true;
+    *hasViewbox = 1;
     SVGNative::Rect viewBox = context->mDocument->ViewBox();
     viewbox->x0 = viewBox.x;
     viewbox->y0 = viewBox.y;
@@ -95,7 +96,7 @@ snv_status_t snv_get_viewbox(snv_t *context, bool *hasViewbox, snv_rect *viewbox
   }
   else
   {
-    *hasViewbox = false;
+    *hasViewbox = 0;
   }
 }
 

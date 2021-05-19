@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     snv_t *context;
     snv_create(svgInput.c_str(), &context);
     snv_rect viewBox;
-    bool hasViewBox;
+    int hasViewBox;
     snv_get_viewbox(context, &hasViewBox, &viewBox);
     if (hasViewBox)
       printf("%f %f %f %f\n", viewBox.x0, viewBox.y0, viewBox.x1, viewBox.y1);

@@ -45,7 +45,7 @@ SVG_IMP_EXP snv_status_t snv_get_bbox(snv_t *context, snv_rect *bbox);
 SVG_IMP_EXP snv_status_t snv_transform_scale(snv_t *context, double scale_x, double scale_y);
 SVG_IMP_EXP snv_status_t snv_transform_translate(snv_t *context, double x, double y);
 SVG_IMP_EXP snv_status_t snv_transform_reset(snv_t *context);
-SVG_IMP_EXP snv_status_t snv_get_viewbox(snv_t *context, bool *hasViewbox, snv_rect *viewBox);
+SVG_IMP_EXP snv_status_t snv_get_viewbox(snv_t *context, int *hasViewbox, snv_rect *viewBox);
 SVG_IMP_EXP snv_status_t snv_render(snv_t *context, unsigned char *data, int width, int height, int stride);
 SVG_IMP_EXP void snv_destroy(snv_t *context);
 
