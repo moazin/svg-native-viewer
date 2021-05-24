@@ -299,7 +299,19 @@ void prevSVG(State *state)
 
 void loadFiles(State *state)
 {
+    state->filenames.push_back("./files/dataset/shapes.svg");
+    state->filenames.push_back("./files/dataset/shapes-stroked.svg");
+    state->filenames.push_back("./files/dataset/shapes-styled.svg");
+    state->filenames.push_back("./files/dataset/shapes-images.svg");
+    state->filenames.push_back("./files/dataset/shapes-opacities.svg");
+    state->filenames.push_back("./files/dataset/shapes-use.svg");
     state->filenames.push_back("./files/dataset/shapes-gradients.svg");
+    state->filenames.push_back("./files/dataset/shapes-group.svg");
+    state->filenames.push_back("./files/dataset/shapes-advance-clipping.svg");
+    state->filenames.push_back("./files/dataset/shapes-clipping.svg");
+    state->filenames.push_back("./files/dataset/shapes-rgb.svg");
+    state->filenames.push_back("./files/dataset/shapes-gradient.svg");
+    state->filenames.push_back("./files/dataset/shapes-quad.svg");
 }
 
 void destroy(State *state)
