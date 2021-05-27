@@ -299,7 +299,14 @@ void prevSVG(State *state)
 
 void loadFiles(State *state)
 {
-    state->filenames.push_back("./files/dataset/shapes-gradients.svg");
+  state->filenames.push_back("./files/dataset/test.svg");
+  /*
+  char filename[100];
+  for(int i = 0; i < 1234; i++){
+    sprintf(filename, "./svgs/glyph-%d.svg", i);
+    state->filenames.push_back(filename);
+  }
+  */
 }
 
 void destroy(State *state)
