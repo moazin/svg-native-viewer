@@ -144,6 +144,22 @@ void SVGDocument::Render(const char* id, const ColorMap& colorMap, float width, 
     mDocument->Render(id, colorMap, width, height);
 }
 
+std::int32_t SVGDocument::X() const
+{
+    if (!mDocument)
+        return 0;
+
+    return static_cast<std::int32_t>(mDocument->mViewBox[0]);
+}
+
+std::int32_t SVGDocument::Y() const
+{
+    if (!mDocument)
+        return 0;
+
+    return static_cast<std::int32_t>(mDocument->mViewBox[1]);
+}
+
 std::int32_t SVGDocument::Width() const
 {
     if (!mDocument)

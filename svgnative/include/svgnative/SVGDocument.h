@@ -49,6 +49,10 @@ public:
 
     ~SVGDocument();
 
+    std::int32_t X() const;
+
+    std::int32_t Y() const;
+
     /**
      * Get the horizontal dimension of the SVG document in local coordinates.
      * @return Horizontal dimension of the SVG document in local coordinates.
