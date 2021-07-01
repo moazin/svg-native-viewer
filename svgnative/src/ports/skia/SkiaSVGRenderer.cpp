@@ -308,15 +308,10 @@ Rect SkiaSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicSt
 
     SVG_ASSERT(mCanvas);
     Save(graphicStyle);
-    if (fillStyle.hasFill)
-    {
-        SkPaint fill;
-        fill.setStyle(SkPaint::kFill_Style);
-        CreateSkPaint(fillStyle.paint, fillStyle.fillOpacity, fill);
-        SkPath mPath = (static_cast<const SkiaSVGPath&>(path).mPath);
-        mPath.setFillType(fillStyle.fillRule == WindingRule::kNonZero ? SkPathFillType::kWinding : SkPathFillType::kEvenOdd);
-        bounds = mPath.computeTightBounds();
-    }
+    SkPath mPath = (static_cast<const SkiaSVGPath&>(path).mPath);
+    mPath.setFillType(fillStyle.fillRule == WindingRule::kNonZero ? SkPathFillType::kWinding : SkPathFillType::kEvenOdd);
+    bounds = mPath.computeTightBounds();
+    printf("fill bounds: %f %f %f %f\n", bounds.x(), bounds.y(), bounds.width(), bounds.height());
     if (strokeStyle.hasStroke)
     {
         SkPaint stroke;
@@ -334,7 +329,7 @@ Rect SkiaSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicSt
             bounds = mPath.computeTightBounds();
         if (stroke.canComputeFastBounds())
           bounds = stroke.computeFastBounds(bounds, &bounds);
-
+        printf("stroke bounds: %f %f %f %f\n", bounds.x(), bounds.y(), bounds.width(), bounds.height());
     }
 
     SkMatrix matrix = mCanvas->getLocalToDeviceAs3x3();
@@ -347,13 +342,11 @@ Rect SkiaSVGRenderer::PathBounds(const Path& path, const GraphicStyle& graphicSt
       SkIRect clip = mCanvas->getDeviceClipBounds();
       Rect clip_bounds{(float)clip.x(), (float)clip.y(), (float)clip.width(), (float)clip.height()};
       Rect new_bounds = old_bounds & clip_bounds;
-      printf("orig -> %f %f %f %f\n", old_bounds.x, old_bounds.y, old_bounds.width, old_bounds.height);
-      printf("clip -> %f %f %f %f\n", clip_bounds.x, clip_bounds.y, clip_bounds.width, clip_bounds.height);
-      printf("new -> %f %f %f %f\n", new_bounds.x, new_bounds.y, new_bounds.width, new_bounds.height);
       bounds = SkRect{new_bounds.x, new_bounds.y, new_bounds.x + new_bounds.width - 1, new_bounds.y + new_bounds.height - 1};
     }
     Restore();
 
+    printf("final bounds: %f %f %f %f\n", bounds.x(), bounds.y(), bounds.width(), bounds.height());
     return Rect{bounds.x(), bounds.y(), bounds.width(), bounds.height()};
 }
 

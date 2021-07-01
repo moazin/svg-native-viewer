@@ -367,7 +367,7 @@ public:
 class SVGRenderer
 {
 public:
-    virtual ~SVGRenderer() = default;
+    virtual ~SVGRenderer(){}
 
     virtual std::unique_ptr<ImageData> CreateImageData(const std::string& base64, ImageEncoding) = 0;
     virtual std::unique_ptr<Path> CreatePath() = 0;
