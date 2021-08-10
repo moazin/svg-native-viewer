@@ -14,7 +14,7 @@ governing permissions and limitations under the License.
 #define SVGViewer_SkiaSVGRenderer_h
 
 #include "svgnative/SVGRenderer.h"
-#include "SkPath.h"
+#include "include/core/SkPath.h"
 
 struct SkRect;
 class SkCanvas;
