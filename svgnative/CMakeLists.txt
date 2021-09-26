@@ -203,6 +203,7 @@ endif()
 if (USE_CAIRO_EXAMPLE)
     add_subdirectory(example/testCairo)
 endif()
+add_subdirectory(example/testSDL)
 
 ##############################
 # CPP and Headers for Library
