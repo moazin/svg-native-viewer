@@ -14,6 +14,8 @@ governing permissions and limitations under the License.
 #include SVGNATIVE_USER_CONFIG
 #endif
 
+#define DEBUG_API
+
 #ifndef SVGViewer_Config_h
 #define SVGViewer_Config_h
 

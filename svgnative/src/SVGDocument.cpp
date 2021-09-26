@@ -141,7 +141,7 @@ bool SVGDocument::GetBoundingBox(const char *id, Rect& bounds)
 }
 
 #ifdef DEBUG_API
-bool GetSubBoundingBoxes(std::vector<Rect>& bounds)
+bool SVGDocument::GetSubBoundingBoxes(std::vector<Rect>& bounds)
 {
     if (!mDocument)
         return false;

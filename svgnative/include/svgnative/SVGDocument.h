@@ -200,7 +200,7 @@ public:
      * This is a temporary API for the purpose of testing that will be removed when I convert
      * the PR from draft status to a regular PR.
      */
-    bool SubBounds(std::vector<Rect>& bounds);
+    bool GetSubBoundingBoxes(std::vector<Rect>& bounds);
 #endif
 
 private:

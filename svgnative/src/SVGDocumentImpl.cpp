@@ -1027,7 +1027,7 @@ bool SVGDocumentImpl::GetBoundingBox(const char* id, Rect& bound)
 
 
 #ifdef DEBUG_API
-bool GetSubBoundingBoxes(std::vector<Rect>& bounds);
+bool SVGDocumentImpl::GetSubBoundingBoxes(std::vector<Rect>& bounds)
 {
     SVG_ASSERT(mGroup);
     if (!mGroup)
@@ -1042,7 +1042,7 @@ bool GetSubBoundingBoxes(std::vector<Rect>& bounds);
     return true;
 }
 
-bool GetSubBoundingBoxes(const char* id, std::vector<Rect>& bounds);
+bool SVGDocumentImpl::GetSubBoundingBoxes(const char* id, std::vector<Rect>& bounds)
 {
     SVG_ASSERT(mGroup);
     if (!mGroup)
